@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARM A32 — Data Processing Instruction Format Reference</title>
+<style>
+  :root {
+    --bg:       #0f1117;
+    --surface:  #181c27;
+    --border:   #2a2f45;
+    --accent:   #5b8af5;
+    --accent2:  #f5a623;
+    --accent3:  #50c878;
+    --accent4:  #e05c5c;
+    --accent5:  #b57bee;
+    --text:     #dde1f0;
+    --muted:    #7a82a0;
+    --mono:     'JetBrains Mono', 'Fira Mono', 'Cascadia Code', monospace;
+
+    --c-cond:  #3b4fa8;
+    --c-cls:   #5a4a8a;
+    --c-i:     #8a6a00;
+    --c-op:    #1a6a4a;
+    --c-s:     #4a7a4a;
+    --c-rn:    #1a5a7a;
+    --c-rd:    #1a5a5a;
+    --c-op2:   #7a2a2a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 24px 16px 48px;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 4px;
+    font-family: var(--mono);
+  }
+
+  .license-badge {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .license-badge a {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent3);
+    border: 1px solid rgba(80,200,120,.35);
+    border-radius: 4px;
+    padding: 2px 10px;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+  }
+  .license-badge a:hover { background: rgba(80,200,120,.1); }
+
+  .ruler-wrap { overflow-x: auto; margin-bottom: 6px; }
+
+  .bit-ruler {
+    display: grid;
+    grid-template-columns: repeat(32, minmax(22px, 1fr));
+    min-width: 700px;
+  }
+
+  .bit-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .fields-row {
+    display: grid;
+    grid-template-columns: repeat(32, minmax(22px, 1fr));
+    min-width: 700px;
+    height: 44px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+
+  .field-block {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 11px;
+    color: #fff;
+    border-right: 1px solid rgba(0,0,0,.3);
+    cursor: default;
+    transition: filter .15s;
+  }
+  .field-block:last-child { border-right: none; }
+  .field-block:hover { filter: brightness(1.25); }
+
+  .f-cond  { background: var(--c-cond); }
+  .f-cls   { background: var(--c-cls); }
+  .f-i     { background: var(--c-i); }
+  .f-op    { background: var(--c-op); }
+  .f-s     { background: var(--c-s); }
+  .f-rn    { background: var(--c-rn); }
+  .f-rd    { background: var(--c-rd); }
+  .f-op2   { background: var(--c-op2); }
+
+  .sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-body { padding: 12px 14px; }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,.12);
+    color: #fff;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 11.5px;
+  }
+  th {
+    background: rgba(255,255,255,.06);
+    padding: 5px 8px;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.03); }
+
+  .code { color: var(--accent2); }
+  .op   { color: var(--accent3); font-weight: 600; }
+  .note { color: var(--muted); font-size: 10.5px; }
+
+  .mini-ruler {
+    display: grid;
+    height: 32px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 8px 0 4px;
+  }
+  .mini-field {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    border-right: 1px solid rgba(0,0,0,.3);
+  }
+  .mini-field:last-child { border-right: none; }
+
+  .mf-shimm { background: #3a5a8a; }
+  .mf-stype { background: #5a3a8a; }
+  .mf-rm    { background: #7a2a2a; }
+  .mf-rs    { background: #2a6a4a; }
+  .mf-zero  { background: #333; }
+  .mf-one   { background: #4a4a1a; }
+  .mf-rotimm{ background: #8a4a00; }
+  .mf-imm8  { background: #5a2a5a; }
+
+  .bit-labels {
+    display: grid;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .bit-label { text-align: center; }
+
+  .warn {
+    background: rgba(240,180,0,.08);
+    border: 1px solid rgba(240,180,0,.3);
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin: 10px 0 0;
+    font-size: 11.5px;
+    color: #f0c850;
+  }
+  .warn strong { color: #ffd060; }
+
+  .info {
+    background: rgba(91,138,245,.08);
+    border: 1px solid rgba(91,138,245,.3);
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    color: #9ab8fa;
+  }
+
+  .example-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 28px;
+  }
+
+  .example-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent3);
+    margin-bottom: 14px;
+  }
+
+  .examples-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 12px;
+  }
+
+  .ex-card {
+    background: rgba(0,0,0,.25);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+
+  .ex-asm {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent3);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .ex-bits {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent2);
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .ex-bits span { margin-right: 4px; }
+
+  .ex-desc { font-size: 11px; color: var(--muted); line-height: 1.6; }
+  .ex-hex  { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-top: 4px; }
+
+  .pseudo {
+    background: #0a0d14;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: #c8d0e8;
+    overflow-x: auto;
+    margin-bottom: 28px;
+  }
+  .kw { color: #7ec8e3; }
+  .fn { color: #f5a623; }
+  .cm { color: #556080; font-style: italic; }
+  .vr { color: #b57bee; }
+  .nm { color: #50c878; }
+
+  .sec-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+    letter-spacing: 0.05em;
+  }
+
+  .cond-al { color: var(--accent3); }
+  .cond-nv { color: var(--accent4); }
+
+  .op-logic { color: #7ec8e3; }
+  .op-arith { color: #f5a623; }
+  .op-test  { color: #b57bee; }
+  .op-move  { color: #50c878; }
+
+  .tag {
+    display: inline-block;
+    padding: 0 5px;
+    border-radius: 3px;
+    font-size: 9.5px;
+    font-family: var(--mono);
+    font-weight: 700;
+    margin-left: 4px;
+  }
+  .tag-logic { background: rgba(126,200,227,.2); color: #7ec8e3; }
+  .tag-arith { background: rgba(245,166,35,.2);  color: #f5a623; }
+  .tag-test  { background: rgba(181,123,238,.2); color: #b57bee; }
+  .tag-move  { background: rgba(80,200,120,.2);  color: #50c878; }
+
+  .flag-note { color: var(--accent4); font-size: 10px; }
+
+  hr.div { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+  .card-full {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<h1>ARM A32 — 32-bit Data Processing Instruction Format</h1>
+<div class="subtitle">ARMv7-A/R ISA · ARM state (A32) · Independent reference for compiler &amp; assembler implementors</div>
+<div class="license-badge">
+  <a href="https://creativecommons.org/publicdomain/zero/1.0/" title="No Rights Reserved">
+    CC0 1.0 — Public Domain · freely copy, modify, distribute without restriction
+  </a>
+</div>
+
+<!-- ── ENHANCED STYLES ── -->
+<style>
+  /* ── Byte dividers in ruler ── */
+  .bit-num.byte-start {
+    border-left: 2px solid rgba(255,255,255,.25);
+    margin-left: -1px;
+  }
+  .byte-label-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    min-width: 700px;
+    margin-bottom: 2px;
+  }
+  .byte-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: rgba(255,255,255,.3);
+    text-align: center;
+    letter-spacing: .05em;
+    border-left: 1px solid rgba(255,255,255,.12);
+    border-right: 1px solid rgba(255,255,255,.12);
+    padding: 1px 0;
+  }
+  .field-block.byte-start { border-left: 2px solid rgba(255,255,255,.2); }
+
+  /* ── Interactive Bit Flipper ── */
+  .interactive-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 28px;
+  }
+  .interactive-title {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .interactive-subtitle {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* Bit flip grid */
+  .flip-wrap { overflow-x: auto; margin-bottom: 6px; }
+  .flip-ruler {
+    display: grid;
+    grid-template-columns: repeat(32, minmax(22px, 1fr));
+    min-width: 700px;
+    margin-bottom: 2px;
+  }
+  .flip-byte-labels {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    min-width: 700px;
+    margin-bottom: 3px;
+  }
+  .flip-byte-lbl {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: rgba(255,255,255,.28);
+    text-align: center;
+    border-left: 1px solid rgba(255,255,255,.1);
+    border-right: 1px solid rgba(255,255,255,.1);
+    padding: 1px 0;
+    letter-spacing: .04em;
+  }
+  .flip-bit-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--border);
+  }
+  .flip-bit-num.byte-sep { border-left: 2px solid rgba(255,255,255,.18); }
+
+  .flip-bits-row {
+    display: grid;
+    grid-template-columns: repeat(32, minmax(22px, 1fr));
+    min-width: 700px;
+    height: 38px;
+    margin-bottom: 4px;
+  }
+  .flip-bit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    user-select: none;
+    border-right: 1px solid rgba(0,0,0,.35);
+    border-bottom: 2px solid transparent;
+    transition: background .12s, transform .1s;
+    position: relative;
+  }
+  .flip-bit.byte-sep { border-left: 2px solid rgba(255,255,255,.2); }
+  .flip-bit:last-child { border-right: none; }
+  .flip-bit:hover { filter: brightness(1.35); transform: scaleY(1.08); z-index: 1; }
+  .flip-bit.active { border-bottom-color: rgba(255,255,255,.5); }
+  /* field colours inherited via data-field attr set in JS */
+  .flip-bit[data-field="cond"]   { background: var(--c-cond); }
+  .flip-bit[data-field="cls"]    { background: var(--c-cls); }
+  .flip-bit[data-field="i"]      { background: var(--c-i); }
+  .flip-bit[data-field="op"]     { background: var(--c-op); }
+  .flip-bit[data-field="s"]      { background: var(--c-s); }
+  .flip-bit[data-field="rn"]     { background: var(--c-rn); }
+  .flip-bit[data-field="rd"]     { background: var(--c-rd); }
+  .flip-bit[data-field="op2"]    { background: var(--c-op2); }
+
+  .flip-fields-row {
+    display: grid;
+    grid-template-columns: repeat(32, minmax(22px, 1fr));
+    min-width: 700px;
+    height: 22px;
+    margin-bottom: 12px;
+  }
+  .flip-field-lbl {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255,255,255,.6);
+    border-right: 1px solid rgba(0,0,0,.2);
+  }
+  .flip-field-lbl[data-field="cond"] { background: rgba(59,79,168,.45); }
+  .flip-field-lbl[data-field="cls"]  { background: rgba(90,74,138,.45); }
+  .flip-field-lbl[data-field="i"]    { background: rgba(138,106,0,.45); }
+  .flip-field-lbl[data-field="op"]   { background: rgba(26,106,74,.45); }
+  .flip-field-lbl[data-field="s"]    { background: rgba(74,122,74,.45); }
+  .flip-field-lbl[data-field="rn"]   { background: rgba(26,90,122,.45); }
+  .flip-field-lbl[data-field="rd"]   { background: rgba(26,90,90,.45); }
+  .flip-field-lbl[data-field="op2"]  { background: rgba(122,42,42,.45); }
+
+  /* Decode readout */
+  .decode-panel {
+    background: #0a0d14;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 24px;
+  }
+  @media (max-width: 600px) { .decode-panel { grid-template-columns: 1fr; } }
+  .decode-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    padding: 4px 0;
+  }
+  .decode-label { color: var(--muted); min-width: 80px; flex-shrink: 0; }
+  .decode-value { color: var(--accent2); font-weight: 700; }
+  .decode-meaning { color: var(--text); font-size: 11px; }
+  .decode-warn { color: var(--accent4); font-size: 10.5px; }
+  .decode-good { color: var(--accent3); font-size: 10.5px; }
+
+  .hex-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--mono);
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .hex-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: .04em;
+  }
+  .bin-bytes {
+    font-size: 11.5px;
+    color: var(--muted);
+    letter-spacing: .05em;
+  }
+  .bin-bytes .byte-grp { margin-right: 8px; }
+  .bin-bytes .byte-grp:last-child { margin-right: 0; }
+  .asm-output {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent3);
+    background: rgba(80,200,120,.08);
+    border: 1px solid rgba(80,200,120,.2);
+    border-radius: 4px;
+    padding: 3px 10px;
+  }
+
+  .flip-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .flip-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.05);
+    color: var(--text);
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .flip-btn:hover { background: rgba(255,255,255,.12); }
+  .flip-btn.preset { color: var(--accent2); border-color: rgba(245,166,35,.3); }
+  .flip-btn.preset:hover { background: rgba(245,166,35,.1); }
+
+  /* ── AI Chat ── */
+  .chat-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .chat-header {
+    background: rgba(91,138,245,.15);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .chat-header-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .chat-header-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+  .chat-icon {
+    width: 24px; height: 24px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .chat-messages {
+    padding: 14px 16px;
+    min-height: 120px;
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .chat-msg {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    animation: fadeSlide .2s ease;
+  }
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .chat-msg.user { flex-direction: row-reverse; }
+  .msg-avatar {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-family: var(--mono); font-weight: 700;
+  }
+  .msg-avatar.ai-av  { background: var(--accent); color: #fff; }
+  .msg-avatar.usr-av { background: rgba(245,166,35,.25); color: var(--accent2); border: 1px solid rgba(245,166,35,.3); }
+  .msg-bubble {
+    max-width: 82%;
+    font-size: 12.5px;
+    line-height: 1.65;
+    padding: 9px 13px;
+    border-radius: 8px;
+  }
+  .chat-msg.ai .msg-bubble {
+    background: rgba(91,138,245,.1);
+    border: 1px solid rgba(91,138,245,.2);
+    color: var(--text);
+  }
+  .chat-msg.user .msg-bubble {
+    background: rgba(245,166,35,.1);
+    border: 1px solid rgba(245,166,35,.2);
+    color: var(--text);
+    text-align: right;
+  }
+  .msg-bubble code {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    background: rgba(0,0,0,.3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent2);
+  }
+  .msg-bubble strong { color: var(--accent3); }
+  .chat-thinking {
+    display: flex; gap: 4px; align-items: center; padding: 4px 2px;
+  }
+  .chat-thinking span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .chat-thinking span:nth-child(2) { animation-delay: .2s; }
+  .chat-thinking span:nth-child(3) { animation-delay: .4s; }
+  @keyframes pulse {
+    0%,80%,100% { opacity: .3; transform: scale(.8); }
+    40%          { opacity: 1;  transform: scale(1.1); }
+  }
+  .chat-input-area {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+  }
+  .chat-input {
+    flex: 1;
+    background: rgba(0,0,0,.3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-input::placeholder { color: var(--muted); }
+  .chat-send {
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s, opacity .15s;
+  }
+  .chat-send:hover { background: #7aa3ff; }
+  .chat-send:disabled { opacity: .45; cursor: default; }
+  .chat-quick {
+    padding: 0 16px 10px;
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .quick-btn {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    padding: 3px 9px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .quick-btn:hover { color: var(--text); border-color: var(--accent); background: rgba(91,138,245,.08); }
+</style>
+
+<!-- ── BIT RULER ── -->
+<div class="ruler-wrap">
+  <div class="flip-byte-labels" id="byte-labels-top"></div>
+  <div class="bit-ruler" id="ruler"></div>
+  <div class="fields-row" id="fields"></div>
+</div>
+
+<script>
+/* ── Byte labels above ruler ── */
+const blt = document.getElementById('byte-labels-top');
+['Byte 3 [31:24]','Byte 2 [23:16]','Byte 1 [15:8]','Byte 0 [7:0]'].forEach(t => {
+  const d = document.createElement('div');
+  d.className = 'byte-label';
+  d.textContent = t;
+  blt.appendChild(d);
+});
+
+/* ── Bit ruler with byte separators ── */
+const ruler = document.getElementById('ruler');
+for (let i = 31; i >= 0; i--) {
+  const d = document.createElement('div');
+  d.className = 'bit-num';
+  if (i % 8 === 7 && i !== 31) d.classList.add('byte-start');
+  d.textContent = i;
+  ruler.appendChild(d);
+}
+
+const FIELDS = [
+  ['Cond',     4,  'f-cond', '[31:28] Condition code — 4 bits'],
+  ['00',       2,  'f-cls',  '[27:26] Instruction class identifier = 0b00'],
+  ['I',        1,  'f-i',    '[25] Immediate flag: 0 = register operand, 1 = immediate'],
+  ['Opcode',   4,  'f-op',   '[24:21] Operation code — 4 bits'],
+  ['S',        1,  'f-s',    '[20] Set-flags bit: 1 = update NZCV'],
+  ['Rn',       4,  'f-rn',   '[19:16] First source register'],
+  ['Rd',       4,  'f-rd',   '[15:12] Destination register'],
+  ['Operand2', 12, 'f-op2',  '[11:0] Second operand — 12 bits, three encodings'],
+];
+
+const frow = document.getElementById('fields');
+FIELDS.forEach(([lbl, span, cls, tip], idx) => {
+  const d = document.createElement('div');
+  d.className = 'field-block ' + cls;
+  if (idx === 5) d.classList.add('byte-start'); // Rn starts at bit 19 → byte boundary at 16
+  d.style.gridColumn = `span ${span}`;
+  d.textContent = lbl;
+  d.title = tip;
+  frow.appendChild(d);
+});
+</script>
+
+<!-- ════════════════════════════════════════════════
+     ── INTERACTIVE BIT FLIPPER ──
+════════════════════════════════════════════════ -->
+<div class="interactive-section" id="interactive-flipper">
+  <div class="interactive-title">
+    <span style="color:var(--accent2)">⚡</span> Interactive Instruction Builder
+  </div>
+  <div class="interactive-subtitle">Click any bit to toggle it · Watch the instruction decode in real-time · Load a preset or type your own hex</div>
+
+  <div class="flip-controls" id="preset-btns">
+    <span style="font-family:var(--mono);font-size:11px;color:var(--muted);align-self:center">Presets:</span>
+    <button class="flip-btn preset" data-hex="E0813002">ADD R3,R1,R2</button>
+    <button class="flip-btn preset" data-hex="E2900001">ADDS R0,R0,#1</button>
+    <button class="flip-btn preset" data-hex="03A050FF">MOVEQ R5,#0xFF000000</button>
+    <button class="flip-btn preset" data-hex="E1520413">CMP R2,R3 LSL R4</button>
+    <button class="flip-btn preset" data-hex="E1A00061">MOV R0,R1 RRX</button>
+    <button class="flip-btn preset" data-hex="01121843">ANDNES R1,R2,R3 ASR#16</button>
+    <button class="flip-btn" id="btn-clear" style="color:var(--accent4);border-color:rgba(224,92,92,.3)">✕ Clear</button>
+  </div>
+
+  <div class="flip-wrap">
+    <div class="flip-byte-labels" id="fb-byte-labels"></div>
+    <div class="flip-ruler" id="fb-ruler"></div>
+    <div class="flip-bits-row" id="fb-bits"></div>
+    <div class="flip-fields-row" id="fb-fields"></div>
+  </div>
+
+  <div class="hex-row">
+    <span class="hex-value" id="hex-display">0x00000000</span>
+    <span class="bin-bytes" id="bin-display"></span>
+    <span class="asm-output" id="asm-display">—</span>
+  </div>
+
+  <div class="decode-panel" id="decode-panel"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     ── AI CHAT ──
+════════════════════════════════════════════════ -->
+<div class="chat-section" id="ai-chat">
+  <div class="chat-header">
+    <div class="chat-icon">⚙</div>
+    <div>
+      <div class="chat-header-title">ARM Assistant</div>
+    </div>
+    <div class="chat-header-sub">Powered by Claude · Ask about any instruction or encoding</div>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-msg ai">
+      <div class="msg-avatar ai-av">AI</div>
+      <div class="msg-bubble">
+        Hello! I'm your ARM A32 expert. Ask me anything about:<br>
+        <strong>• Instruction encoding</strong> — how fields map to bits<br>
+        <strong>• Condition codes</strong> — what they mean and when to use them<br>
+        <strong>• Operand2</strong> — shift types, immediates, rotations<br>
+        <strong>• Your custom encoding</strong> — build one in the flipper above and ask me what it does!
+      </div>
+    </div>
+  </div>
+  <div class="chat-quick" id="quick-prompts">
+    <button class="quick-btn">What is Operand2?</button>
+    <button class="quick-btn">How do condition codes work?</button>
+    <button class="quick-btn">Explain the S-bit</button>
+    <button class="quick-btn">What's RRX encoding?</button>
+    <button class="quick-btn">Explain my current encoding</button>
+  </div>
+  <div class="chat-input-area">
+    <input class="chat-input" id="chat-input" type="text" placeholder="Ask about ARM instructions, encodings, fields…" maxlength="400" />
+    <button class="chat-send" id="chat-send">Send</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   INTERACTIVE BIT FLIPPER — core logic
+═══════════════════════════════════════════════════ */
+
+// Map bit position (31=MSB) → field tag
+const BIT_FIELD_MAP = (() => {
+  const m = {};
+  for (let b = 28; b <= 31; b++) m[b] = 'cond';
+  for (let b = 26; b <= 27; b++) m[b] = 'cls';
+  m[25] = 'i';
+  for (let b = 21; b <= 24; b++) m[b] = 'op';
+  m[20] = 's';
+  for (let b = 16; b <= 19; b++) m[b] = 'rn';
+  for (let b = 12; b <= 15; b++) m[b] = 'rd';
+  for (let b =  0; b <= 11; b++) m[b] = 'op2';
+  return m;
+})();
+
+const FIELD_LABELS = { cond:'Cond', cls:'00', i:'I', op:'Op', s:'S', rn:'Rn', rd:'Rd', op2:'Op2' };
+
+// State: 32 bits stored as a plain number
+let instrWord = 0x00000000;
+const bitEls = [];
+
+/* Build byte-labels row */
+const fbByteLabels = document.getElementById('fb-byte-labels');
+['Byte 3 [31:24]','Byte 2 [23:16]','Byte 1 [15:8]','Byte 0 [7:0]'].forEach(t => {
+  const d = document.createElement('div');
+  d.className = 'flip-byte-lbl';
+  d.textContent = t;
+  fbByteLabels.appendChild(d);
+});
+
+/* Build bit-number ruler */
+const fbRuler = document.getElementById('fb-ruler');
+for (let i = 31; i >= 0; i--) {
+  const d = document.createElement('div');
+  d.className = 'flip-bit-num';
+  if (i % 8 === 7 && i !== 31) d.classList.add('byte-sep');
+  d.textContent = i;
+  fbRuler.appendChild(d);
+}
+
+/* Build clickable bit cells */
+const fbBits = document.getElementById('fb-bits');
+for (let i = 31; i >= 0; i--) {
+  const d = document.createElement('div');
+  d.className = 'flip-bit';
+  if (i % 8 === 7 && i !== 31) d.classList.add('byte-sep');
+  d.dataset.bit = i;
+  d.dataset.field = BIT_FIELD_MAP[i];
+  d.textContent = '0';
+  d.title = `Bit ${i} · field: ${BIT_FIELD_MAP[i]}`;
+  d.addEventListener('click', () => toggleBit(i));
+  fbBits.appendChild(d);
+  bitEls[i] = d;
+}
+
+/* Build field label strip under bit cells */
+const fbFields = document.getElementById('fb-fields');
+const FIELD_ORDER = [
+  ['cond',31,28],['cls',27,26],['i',25,25],['op',24,21],
+  ['s',20,20],['rn',19,16],['rd',15,12],['op2',11,0]
+];
+FIELD_ORDER.forEach(([f, hi, lo]) => {
+  const span = hi - lo + 1;
+  const d = document.createElement('div');
+  d.className = 'flip-field-lbl';
+  d.dataset.field = f;
+  d.style.gridColumn = `span ${span}`;
+  d.textContent = FIELD_LABELS[f];
+  fbFields.appendChild(d);
+});
+
+/* ── Core helpers ── */
+function getBit(word, n) { return (word >>> n) & 1; }
+function setBitVal(word, n, v) {
+  if (v) return word | (1 << n);
+  return word & ~(1 << n);
+}
+function getField(word, hi, lo) { return (word >>> lo) & ((1 << (hi - lo + 1)) - 1); }
+
+function toggleBit(n) {
+  const cur = getBit(instrWord, n);
+  instrWord = setBitVal(instrWord, n, cur ^ 1);
+  renderAll();
+}
+
+function loadHex(hex) {
+  const v = parseInt(hex, 16);
+  if (!isNaN(v)) { instrWord = v >>> 0; renderAll(); }
+}
+
+/* ── Lookup tables ── */
+const COND_TABLE = [
+  ['EQ','Z=1 (equal)'],
+  ['NE','Z=0 (not equal)'],
+  ['CS/HS','C=1 (carry / unsigned ≥)'],
+  ['CC/LO','C=0 (borrow / unsigned <)'],
+  ['MI','N=1 (negative)'],
+  ['PL','N=0 (positive or zero)'],
+  ['VS','V=1 (overflow)'],
+  ['VC','V=0 (no overflow)'],
+  ['HI','C=1 ∧ Z=0 (unsigned higher)'],
+  ['LS','C=0 ∨ Z=1 (unsigned lower/same)'],
+  ['GE','N=V (signed ≥)'],
+  ['LT','N≠V (signed <)'],
+  ['GT','Z=0 ∧ N=V (signed >)'],
+  ['LE','Z=1 ∨ N≠V (signed ≤)'],
+  ['AL','Always (unconditional)'],
+  ['NV','⚠ Reserved / unconditional space (ARMv5+)'],
+];
+
+const OP_TABLE = [
+  ['AND','Rd = Rn & Op2','logic'],
+  ['EOR','Rd = Rn ^ Op2','logic'],
+  ['SUB','Rd = Rn − Op2','arith'],
+  ['RSB','Rd = Op2 − Rn','arith'],
+  ['ADD','Rd = Rn + Op2','arith'],
+  ['ADC','Rd = Rn + Op2 + C','arith'],
+  ['SBC','Rd = Rn − Op2 − ¬C','arith'],
+  ['RSC','Rd = Op2 − Rn − ¬C','arith'],
+  ['TST','flags(Rn & Op2) — no writeback','test'],
+  ['TEQ','flags(Rn ^ Op2) — no writeback','test'],
+  ['CMP','flags(Rn − Op2) — no writeback','test'],
+  ['CMN','flags(Rn + Op2) — no writeback','test'],
+  ['ORR','Rd = Rn | Op2','logic'],
+  ['MOV','Rd = Op2 (Rn ignored)','move'],
+  ['BIC','Rd = Rn & ~Op2','logic'],
+  ['MVN','Rd = ~Op2 (Rn ignored)','move'],
+];
+
+const SHIFT_TYPE = ['LSL','LSR','ASR','ROR'];
+
+function regName(n) { return n === 15 ? 'PC' : n === 14 ? 'LR' : n === 13 ? 'SP' : `R${n}`; }
+
+/* ── Decode logic ── */
+function decode(w) {
+  const cond   = getField(w, 31, 28);
+  const cls    = getField(w, 27, 26);
+  const I      = getBit(w, 25);
+  const opcode = getField(w, 24, 21);
+  const S      = getBit(w, 20);
+  const Rn     = getField(w, 19, 16);
+  const Rd     = getField(w, 15, 12);
+  const op2    = getField(w, 11, 0);
+
+  const condInfo  = COND_TABLE[cond];
+  const opInfo    = OP_TABLE[opcode];
+  const isTestOp  = opcode >= 8 && opcode <= 11;
+  const isMov     = opcode === 13 || opcode === 15;
+
+  let op2Desc = '';
+  let asmOp2  = '';
+
+  if (I === 1) {
+    const rot  = getField(w, 11, 8);
+    const imm8 = getField(w, 7, 0);
+    const rotAmt = rot * 2;
+    const val = rotAmt === 0 ? imm8 : ((imm8 >>> rotAmt) | (imm8 << (32 - rotAmt))) >>> 0;
+    op2Desc = `imm8=0x${imm8.toString(16).toUpperCase().padStart(2,'0')}, rot_imm=${rot} (×2=${rotAmt}°) → 0x${val.toString(16).toUpperCase().padStart(8,'0')}`;
+    asmOp2  = `#0x${val.toString(16).toUpperCase()}`;
+  } else {
+    const Rm   = getField(w, 3, 0);
+    const bit4 = getBit(w, 4);
+    const bit7 = getBit(w, 7);
+    const st   = getField(w, 6, 5);
+    if (bit4 === 0) {
+      const imm5 = getField(w, 11, 7);
+      if (st === 3 && imm5 === 0) {
+        op2Desc = `${regName(Rm)}, RRX  (ROR with imm5=0 → rotate-extend via C flag)`;
+        asmOp2  = `${regName(Rm)}, RRX`;
+      } else if (imm5 === 0 && st === 0) {
+        op2Desc = `${regName(Rm)}  (no shift — LSL #0)`;
+        asmOp2  = regName(Rm);
+      } else {
+        const sname = st === 1 && imm5 === 0 ? 'LSR #32' : st === 2 && imm5 === 0 ? 'ASR #32' : `${SHIFT_TYPE[st]} #${imm5}`;
+        op2Desc = `${regName(Rm)}, ${sname}`;
+        asmOp2  = `${regName(Rm)}, ${sname}`;
+      }
+    } else if (bit7 === 0) {
+      const Rs = getField(w, 11, 8);
+      op2Desc = `${regName(Rm)}, ${SHIFT_TYPE[st]} ${regName(Rs)}  (shift by register)`;
+      asmOp2  = `${regName(Rm)}, ${SHIFT_TYPE[st]} ${regName(Rs)}`;
+    } else {
+      op2Desc = `⚠ bit[7]=1 and bit[4]=1 → NOT a Data Processing op (Multiply/Extension space)`;
+      asmOp2  = '?';
+    }
+  }
+
+  let asmStr = '';
+  if (cls !== 0) {
+    asmStr = `⚠ bits[27:26]=${cls.toString(2).padStart(2,'0')} — NOT Data Processing`;
+  } else {
+    const suffix  = (S && !isTestOp) ? 'S' : '';
+    const condSfx = cond !== 14 ? condInfo[0] : '';
+    const mnem = opInfo[0] + condSfx + suffix;
+    if (isTestOp) {
+      asmStr = `${mnem} ${regName(Rn)}, ${asmOp2}`;
+    } else if (isMov) {
+      asmStr = `${mnem} ${regName(Rd)}, ${asmOp2}`;
+    } else {
+      asmStr = `${mnem} ${regName(Rd)}, ${regName(Rn)}, ${asmOp2}`;
+    }
+  }
+
+  return { cond, cls, I, opcode, S, Rn, Rd, op2, condInfo, opInfo, isTestOp, isMov, op2Desc, asmStr };
+}
+
+/* ── Render functions ── */
+function renderAll() {
+  const w = instrWord >>> 0;
+
+  // Update bit cells
+  for (let i = 31; i >= 0; i--) {
+    const v = getBit(w, i);
+    bitEls[i].textContent = v;
+    bitEls[i].classList.toggle('active', v === 1);
+  }
+
+  // Hex + binary bytes
+  document.getElementById('hex-display').textContent =
+    '0x' + w.toString(16).toUpperCase().padStart(8, '0');
+
+  const binStr = w.toString(2).padStart(32, '0');
+  document.getElementById('bin-display').innerHTML =
+    [binStr.slice(0,8), binStr.slice(8,16), binStr.slice(16,24), binStr.slice(24,32)]
+      .map(b => `<span class="byte-grp">${b}</span>`).join(' ');
+
+  // Decode
+  const d = decode(w);
+  document.getElementById('asm-display').textContent = d.asmStr || '—';
+
+  // Decode panel
+  const panel = document.getElementById('decode-panel');
+  const clsOk  = d.cls === 0;
+  const condNV  = d.cond === 15;
+  const bit4 = getBit(w, 4), bit7 = getBit(w, 7);
+  const mulConflict = d.I === 0 && bit4 === 1 && bit7 === 1;
+
+  let rows = [
+    ['Cond [31:28]',
+      `${d.cond.toString(2).padStart(4,'0')} (${d.condInfo[0]})`,
+      d.condInfo[1],
+      condNV ? 'warn' : (d.cond === 14 ? 'good' : '')],
+    ['Class [27:26]',
+      `${d.cls.toString(2).padStart(2,'0')}`,
+      clsOk ? 'Data Processing ✓' : '⚠ NOT Data Processing',
+      clsOk ? 'good' : 'warn'],
+    ['I [25]',
+      `${d.I}`,
+      d.I ? 'Immediate encoding (I=1)' : 'Register encoding (I=0)',
+      ''],
+    ['Opcode [24:21]',
+      `${d.opcode.toString(2).padStart(4,'0')} (${d.opInfo[0]})`,
+      d.opInfo[1],
+      ''],
+    ['S [20]',
+      `${d.S}`,
+      d.S ? (d.isTestOp ? 'S=1 implicit for test ops ✓' : 'Flags NZCV will be updated') : 'Flags unchanged',
+      ''],
+    ['Rn [19:16]',
+      `${d.Rn.toString(2).padStart(4,'0')} (${regName(d.Rn)})`,
+      d.isMov ? '⚠ Rn ignored by MOV/MVN — should be 0000' :
+        d.Rn === 15 ? 'PC: reads as instruction_addr + 8' : 'First source register',
+      (d.isMov && d.Rn !== 0) ? 'warn' : ''],
+    ['Rd [15:12]',
+      `${d.Rd.toString(2).padStart(4,'0')} (${regName(d.Rd)})`,
+      d.isTestOp ? (d.Rd !== 0 ? '⚠ Must be 0000 for test ops' : 'Result discarded (test op)') :
+        d.Rd === 15 ? 'Writing PC acts as branch' : 'Destination register',
+      (d.isTestOp && d.Rd !== 0) ? 'warn' : ''],
+    ['Operand2 [11:0]',
+      `0x${d.op2.toString(16).toUpperCase().padStart(3,'0')}`,
+      mulConflict ? '⚠ bit[7]=1 & bit[4]=1 → Multiply/Ext space!' : d.op2Desc,
+      mulConflict ? 'warn' : ''],
+  ];
+
+  panel.innerHTML = rows.map(([lbl, val, meaning, flag]) => `
+    <div class="decode-row">
+      <span class="decode-label">${lbl}</span>
+      <span class="decode-value">${val}</span>
+      <span class="${flag === 'warn' ? 'decode-warn' : flag === 'good' ? 'decode-good' : 'decode-meaning'}">${meaning}</span>
+    </div>`).join('');
+}
+
+/* ── Presets ── */
+document.querySelectorAll('.flip-btn.preset').forEach(btn => {
+  btn.addEventListener('click', () => loadHex(btn.dataset.hex));
+});
+document.getElementById('btn-clear').addEventListener('click', () => {
+  instrWord = 0; renderAll();
+});
+
+/* Initial render */
+loadHex('E0813002'); // ADD R3,R1,R2 as default
+
+/* ═══════════════════════════════════════════════════
+   AI CHAT — Claude-powered ARM assistant
+═══════════════════════════════════════════════════ */
+
+const messagesEl  = document.getElementById('chat-messages');
+const chatInput   = document.getElementById('chat-input');
+const chatSend    = document.getElementById('chat-send');
+
+const SYSTEM_PROMPT = `You are a precise, expert ARMv7-A/R A32 ISA assistant embedded in an interactive reference document. 
+The user is looking at ARM A32 data-processing instruction encoding and may ask about:
+- Bit fields (Cond, I, Opcode, S, Rn, Rd, Operand2)
+- Condition codes and their flag semantics
+- Operand2 encodings: shift-by-immediate, shift-by-register, rotated immediate
+- Specific instructions (AND, EOR, SUB, ADD, MOV, CMP, TST, etc.)
+- Encoding edge cases (RRX, LSR #32, MOV Rn=0, test-ops S=1 constraint, etc.)
+- Arbitrary 32-bit hex values they've constructed in the interactive flipper
+
+Be concise and technical. Use inline code formatting with backticks. 
+When explaining an encoding, reference the bit positions explicitly e.g. [31:28], [25], [11:0].
+If the user asks about a hex value or "my current encoding", decode it carefully and explain every field.
+Keep responses short unless depth is needed. Never be verbose or repeat yourself.`;
+
+function getCurrentEncodingContext() {
+  const w = instrWord >>> 0;
+  const hex = '0x' + w.toString(16).toUpperCase().padStart(8, '0');
+  const d = decode(w);
+  return `\n\n[CURRENT FLIPPER STATE: ${hex} = ${d.asmStr || '(invalid DP encoding)'}]`;
+}
+
+function addMessage(role, html) {
+  const msg = document.createElement('div');
+  msg.className = `chat-msg ${role}`;
+  const av = document.createElement('div');
+  av.className = `msg-avatar ${role === 'ai' ? 'ai-av' : 'usr-av'}`;
+  av.textContent = role === 'ai' ? 'AI' : 'You';
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.innerHTML = html;
+  if (role === 'ai') { msg.appendChild(av); msg.appendChild(bubble); }
+  else               { msg.appendChild(bubble); msg.appendChild(av); }
+  messagesEl.appendChild(msg);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return bubble;
+}
+
+function addThinking() {
+  const msg = document.createElement('div');
+  msg.className = 'chat-msg ai';
+  msg.id = 'thinking-msg';
+  const av = document.createElement('div');
+  av.className = 'msg-avatar ai-av';
+  av.textContent = 'AI';
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.innerHTML = '<div class="chat-thinking"><span></span><span></span><span></span></div>';
+  msg.appendChild(av); msg.appendChild(bubble);
+  messagesEl.appendChild(msg);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return msg;
+}
+
+function formatAIText(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
+}
+
+const conversationHistory = [];
+
+async function sendMessage(userText) {
+  if (!userText.trim()) return;
+  chatSend.disabled = true;
+  chatInput.value = '';
+
+  addMessage('user', userText.replace(/</g,'&lt;'));
+
+  const contextNote = userText.toLowerCase().includes('current') ||
+                      userText.toLowerCase().includes('encoding') ||
+                      userText.toLowerCase().includes('flipper') ||
+                      userText.toLowerCase().includes('hex') ||
+                      userText.toLowerCase().includes('0x')
+    ? getCurrentEncodingContext() : '';
+
+  conversationHistory.push({ role: 'user', content: userText + contextNote });
+
+  const thinkEl = addThinking();
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: conversationHistory
+      })
+    });
+    const data = await resp.json();
+    const reply = (data.content || []).map(b => b.text || '').join('');
+    conversationHistory.push({ role: 'assistant', content: reply });
+    thinkEl.remove();
+    addMessage('ai', formatAIText(reply));
+  } catch (err) {
+    thinkEl.remove();
+    addMessage('ai', `<span style="color:var(--accent4)">⚠ Error contacting Claude API. Please check your connection.</span>`);
+  }
+
+  chatSend.disabled = false;
+  chatInput.focus();
+}
+
+chatSend.addEventListener('click', () => sendMessage(chatInput.value));
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(chatInput.value); });
+
+document.querySelectorAll('.quick-btn').forEach(btn => {
+  btn.addEventListener('click', () => sendMessage(btn.textContent));
+});
+</script>
+
+<!-- ── SECTIONS ── -->
+<div class="sections">
+
+  <!-- CONDITION -->
+  <div class="card">
+    <div class="card-header" style="background:rgba(59,79,168,.35);">
+      <span style="color:#8fa8ff">▪</span> Condition [31:28]
+      <span class="badge">4 bits</span>
+    </div>
+    <div class="card-body">
+      <table>
+        <tr><th>Code</th><th>Mnemonic</th><th>Condition (flags)</th></tr>
+        <tr><td class="code">0000</td><td class="op">EQ</td><td>Z=1 (equal)</td></tr>
+        <tr><td class="code">0001</td><td class="op">NE</td><td>Z=0 (not equal)</td></tr>
+        <tr><td class="code">0010</td><td class="op">CS / HS</td><td>C=1 (carry set / unsigned ≥)</td></tr>
+        <tr><td class="code">0011</td><td class="op">CC / LO</td><td>C=0 (carry clear / unsigned &lt;)</td></tr>
+        <tr><td class="code">0100</td><td class="op">MI</td><td>N=1 (minus / negative)</td></tr>
+        <tr><td class="code">0101</td><td class="op">PL</td><td>N=0 (plus / positive or zero)</td></tr>
+        <tr><td class="code">0110</td><td class="op">VS</td><td>V=1 (overflow)</td></tr>
+        <tr><td class="code">0111</td><td class="op">VC</td><td>V=0 (no overflow)</td></tr>
+        <tr><td class="code">1000</td><td class="op">HI</td><td>C=1 ∧ Z=0 (unsigned higher)</td></tr>
+        <tr><td class="code">1001</td><td class="op">LS</td><td>C=0 ∨ Z=1 (unsigned lower or same)</td></tr>
+        <tr><td class="code">1010</td><td class="op">GE</td><td>N=V (signed ≥)</td></tr>
+        <tr><td class="code">1011</td><td class="op">LT</td><td>N≠V (signed &lt;)</td></tr>
+        <tr><td class="code">1100</td><td class="op">GT</td><td>Z=0 ∧ N=V (signed &gt;)</td></tr>
+        <tr><td class="code">1101</td><td class="op">LE</td><td>Z=1 ∨ N≠V (signed ≤)</td></tr>
+        <tr><td class="code">1110</td><td class="op cond-al">AL</td><td>Always (unconditional, default)</td></tr>
+        <tr><td class="code">1111</td><td class="op cond-nv">NV</td><td>⚠ Reserved (ARMv5+: unconditional encode space)</td></tr>
+      </table>
+      <div class="info" style="margin-top:8px">
+        Bits [27:26] = <strong>0b00</strong> identify the Data Processing instruction class.
+        Other values select Load/Store, Branch, Coprocessor, etc.
+      </div>
+    </div>
+  </div>
+
+  <!-- OPCODE -->
+  <div class="card">
+    <div class="card-header" style="background:rgba(26,106,74,.35);">
+      <span style="color:#50c878">▪</span> Opcode [24:21]
+      <span class="badge">4 bits</span>
+    </div>
+    <div class="card-body">
+      <table>
+        <tr><th>Code</th><th>Op</th><th>Operation</th><th>Type</th></tr>
+        <tr><td class="code">0000</td><td class="op op-logic">AND</td><td>Rd = Rn &amp; Op2</td><td><span class="tag tag-logic">logic</span></td></tr>
+        <tr><td class="code">0001</td><td class="op op-logic">EOR</td><td>Rd = Rn ^ Op2</td><td><span class="tag tag-logic">logic</span></td></tr>
+        <tr><td class="code">0010</td><td class="op op-arith">SUB</td><td>Rd = Rn − Op2</td><td><span class="tag tag-arith">arith</span></td></tr>
+        <tr><td class="code">0011</td><td class="op op-arith">RSB</td><td>Rd = Op2 − Rn</td><td><span class="tag tag-arith">arith</span></td></tr>
+        <tr><td class="code">0100</td><td class="op op-arith">ADD</td><td>Rd = Rn + Op2</td><td><span class="tag tag-arith">arith</span></td></tr>
+        <tr><td class="code">0101</td><td class="op op-arith">ADC</td><td>Rd = Rn + Op2 + C</td><td><span class="tag tag-arith">arith</span></td></tr>
+        <tr><td class="code">0110</td><td class="op op-arith">SBC</td><td>Rd = Rn − Op2 − ¬C</td><td><span class="tag tag-arith">arith</span></td></tr>
+        <tr><td class="code">0111</td><td class="op op-arith">RSC</td><td>Rd = Op2 − Rn − ¬C</td><td><span class="tag tag-arith">arith</span></td></tr>
+        <tr><td class="code">1000</td><td class="op op-test">TST</td><td>flags(Rn &amp; Op2); Rd ignored</td><td><span class="tag tag-test">test</span></td></tr>
+        <tr><td class="code">1001</td><td class="op op-test">TEQ</td><td>flags(Rn ^ Op2); Rd ignored</td><td><span class="tag tag-test">test</span></td></tr>
+        <tr><td class="code">1010</td><td class="op op-test">CMP</td><td>flags(Rn − Op2); Rd ignored</td><td><span class="tag tag-test">test</span></td></tr>
+        <tr><td class="code">1011</td><td class="op op-test">CMN</td><td>flags(Rn + Op2); Rd ignored</td><td><span class="tag tag-test">test</span></td></tr>
+        <tr><td class="code">1100</td><td class="op op-logic">ORR</td><td>Rd = Rn | Op2</td><td><span class="tag tag-logic">logic</span></td></tr>
+        <tr><td class="code">1101</td><td class="op op-move">MOV</td><td>Rd = Op2 (Rn ignored)</td><td><span class="tag tag-move">move</span></td></tr>
+        <tr><td class="code">1110</td><td class="op op-logic">BIC</td><td>Rd = Rn &amp; ~Op2</td><td><span class="tag tag-logic">logic</span></td></tr>
+        <tr><td class="code">1111</td><td class="op op-move">MVN</td><td>Rd = ~Op2 (Rn ignored)</td><td><span class="tag tag-move">move</span></td></tr>
+      </table>
+      <div class="warn">
+        <strong>TST / TEQ / CMP / CMN</strong> (codes 1000–1011): S-bit is <strong>always 1</strong>; bits [15:12] (Rd) <strong>must be 0000</strong>. Exception: Rd=R15 + S=1 triggers exception return (SUBS PC, LR).
+      </div>
+      <div class="warn" style="margin-top:6px">
+        <strong>MOV / MVN</strong>: Rn field [19:16] <strong>must be 0000</strong> (ignored by hardware, but required for correct disassembly).
+      </div>
+    </div>
+  </div>
+
+  <!-- S / Rn / Rd -->
+  <div class="card">
+    <div class="card-header" style="background:rgba(74,122,74,.35);">
+      <span style="color:#80d080">▪</span> S [20] · Rn [19:16] · Rd [15:12]
+      <span class="badge">6 bits</span>
+    </div>
+    <div class="card-body">
+      <table>
+        <tr><th>Field</th><th>Bits</th><th>Description</th></tr>
+        <tr>
+          <td class="op">S</td><td class="code">[20]</td>
+          <td>
+            <span class="code">0</span> — NZCV flags unchanged<br>
+            <span class="code">1</span> — NZCV updated from result<br>
+            <span class="flag-note">If Rd=R15 and S=1: CPSR ← SPSR (exception return mode)</span>
+          </td>
+        </tr>
+        <tr>
+          <td class="op">Rn</td><td class="code">[19:16]</td>
+          <td>
+            First source register (R0–R15).<br>
+            <span class="note">Ignored by MOV/MVN; must be 0000 in those encodings.<br>
+            R15 (PC) reads as (instruction_address + 8).</span>
+          </td>
+        </tr>
+        <tr>
+          <td class="op">Rd</td><td class="code">[15:12]</td>
+          <td>
+            Destination register (R0–R15).<br>
+            <span class="note">TST/TEQ/CMP/CMN: must be 0000 (result discarded).<br>
+            Writing R15 (PC): acts as branch; with S=1 also restores CPSR from SPSR.</span>
+          </td>
+        </tr>
+      </table>
+      <div class="info">
+        <strong>NZCV flag semantics:</strong><br>
+        N — Negative: bit 31 of result<br>
+        Z — Zero: result == 0<br>
+        C — Carry: carry-out of bit 31; for SUB/CMP borrow = ¬C<br>
+        V — oVerflow: signed overflow
+      </div>
+    </div>
+  </div>
+
+</div><!-- /sections -->
+
+<!-- ── OPERAND2 ── -->
+<div class="card-full">
+  <div class="card-header" style="background:rgba(122,42,42,.35); padding:12px 16px;">
+    <span style="color:#e08080">▪</span> Operand2 [11:0] — 12 bits · Three encoding variants
+    <span class="badge">I-bit selects</span>
+  </div>
+  <div class="card-body" style="padding:14px 16px;">
+
+    <!-- I=0, bit4=0 -->
+    <div class="sec-title">Case I=0, bit[4]=0 → Register shifted by immediate amount</div>
+    <div class="mini-ruler" style="grid-template-columns: 5fr 2fr 1fr 4fr;">
+      <div class="mini-field mf-shimm">shifter_imm [11:7]</div>
+      <div class="mini-field mf-stype">shift_type [6:5]</div>
+      <div class="mini-field mf-zero">0 [4]</div>
+      <div class="mini-field mf-rm">Rm [3:0]</div>
+    </div>
+    <div class="bit-labels" style="grid-template-columns: 5fr 2fr 1fr 4fr;">
+      <div class="bit-label">5 bits (0–31)</div>
+      <div class="bit-label">2 bits</div>
+      <div class="bit-label">1</div>
+      <div class="bit-label">4 bits</div>
+    </div>
+
+    <table style="margin-bottom:12px">
+      <tr><th>shift_type [6:5]</th><th>Name</th><th>Operation</th><th>Special case (imm5 = 0)</th></tr>
+      <tr><td class="code">00</td><td class="op">LSL</td><td>Rm &lt;&lt; imm5</td><td>imm5=0 → no shift (Rm unchanged, C unaffected)</td></tr>
+      <tr><td class="code">01</td><td class="op">LSR</td><td>Rm &gt;&gt; imm5 (logical)</td><td>imm5=0 encodes <strong>LSR #32</strong>: result=0, C=Rm[31]</td></tr>
+      <tr><td class="code">10</td><td class="op">ASR</td><td>Rm &gt;&gt; imm5 (arithmetic)</td><td>imm5=0 encodes <strong>ASR #32</strong>: result=sign(Rm), C=Rm[31]</td></tr>
+      <tr><td class="code">11</td><td class="op">ROR</td><td>Rm ROR imm5 (rotate right)</td><td>imm5=0 encodes <strong>RRX</strong>: result={C_in, Rm[31:1]}, C←Rm[0]</td></tr>
+    </table>
+
+    <hr class="div">
+
+    <!-- I=0, bit4=1 -->
+    <div class="sec-title">Case I=0, bit[4]=1, bit[7]=0 → Register shifted by register (Rs)</div>
+    <div class="mini-ruler" style="grid-template-columns: 4fr 1fr 2fr 1fr 4fr;">
+      <div class="mini-field mf-rs">Rs [11:8]</div>
+      <div class="mini-field mf-zero">0 [7]</div>
+      <div class="mini-field mf-stype">shift_type [6:5]</div>
+      <div class="mini-field mf-one">1 [4]</div>
+      <div class="mini-field mf-rm">Rm [3:0]</div>
+    </div>
+    <div class="bit-labels" style="grid-template-columns: 4fr 1fr 2fr 1fr 4fr;">
+      <div class="bit-label">Rs (4 bits)</div>
+      <div class="bit-label">0</div>
+      <div class="bit-label">2 bits</div>
+      <div class="bit-label">1</div>
+      <div class="bit-label">Rm (4 bits)</div>
+    </div>
+
+    <table style="margin-bottom:12px">
+      <tr><th>shift_type [6:5]</th><th>Operation</th><th>Rs byte semantics</th></tr>
+      <tr><td class="code">00</td><td class="op">LSL Rm, Rs</td><td>Uses Rs[7:0]; if Rs ≥ 32 → result = 0, C = 0</td></tr>
+      <tr><td class="code">01</td><td class="op">LSR Rm, Rs</td><td>Uses Rs[7:0]; if Rs ≥ 32 → result = 0, C = 0</td></tr>
+      <tr><td class="code">10</td><td class="op">ASR Rm, Rs</td><td>Uses Rs[7:0]; if Rs ≥ 32 → result = sign(Rm), C = Rm[31]</td></tr>
+      <tr><td class="code">11</td><td class="op">ROR Rm, Rs</td><td>Uses only Rs[4:0] (rotation mod 32)</td></tr>
+    </table>
+
+    <div class="warn">
+      <strong>Shift-by-register constraints:</strong> Rs ≠ R15, Rm ≠ R15, Rd ≠ R15, Rn ≠ R15.
+      Bit[7] must be <strong>0</strong> — if bit[7]=1 and bit[4]=1, the encoding is decoded as a
+      Multiply or extension instruction, not Data Processing.
+      RRX is not available in shift-by-register mode (no register-driven RRX encoding exists).
+    </div>
+
+    <hr class="div">
+
+    <!-- I=1 -->
+    <div class="sec-title" style="margin-top:10px">Case I=1 → Immediate value (8-bit rotated constant)</div>
+    <div class="mini-ruler" style="grid-template-columns: 4fr 8fr;">
+      <div class="mini-field mf-rotimm">rot_imm [11:8]</div>
+      <div class="mini-field mf-imm8">imm8 [7:0]</div>
+    </div>
+    <div class="bit-labels" style="grid-template-columns: 4fr 8fr;">
+      <div class="bit-label">4 bits (rotate)</div>
+      <div class="bit-label">8 bits (value)</div>
+    </div>
+
+    <div class="info" style="margin-bottom:10px">
+      <strong>Formula:</strong> <code>immediate = ROR(imm8, rot_imm × 2)</code><br>
+      The 8-bit value is right-rotated by an even number of positions (0, 2, 4, … 30).
+      This covers any 8-bit pattern aligned to an even bit boundary within 32 bits.
+    </div>
+
+    <table>
+      <tr><th>rot_imm</th><th>Rotation (×2)</th><th>Example: imm8=0xFF</th><th>Result</th></tr>
+      <tr><td class="code">0000</td><td>0</td><td>0xFF</td><td class="code">0x000000FF</td></tr>
+      <tr><td class="code">0001</td><td>2</td><td>0xFF</td><td class="code">0xC000003F</td></tr>
+      <tr><td class="code">0010</td><td>4</td><td>0xFF</td><td class="code">0xF000000F</td></tr>
+      <tr><td class="code">0100</td><td>8</td><td>0x01</td><td class="code">0x01000000</td></tr>
+      <tr><td class="code">1111</td><td>30</td><td>0xFF</td><td class="code">0x000003FC</td></tr>
+    </table>
+
+    <div class="warn" style="margin-top:10px">
+      <strong>Un-encodable immediates:</strong> Any 32-bit value that cannot be expressed as
+      an 8-bit byte rotated by an even amount cannot fit in a single instruction.
+      The assembler must use <strong>MOVW/MOVT</strong> (ARMv6T2+) or a <strong>MOV + ORR</strong>
+      sequence for arbitrary 32-bit constants.<br>
+      <strong>Check algorithm:</strong> for each rot ∈ {0..15}, test whether
+      ROR(value, rot × 2) fits in [0..255]. Accept the first match; reject if none found.
+    </div>
+
+    <div class="info" style="margin-top:8px">
+      <strong>C-flag from immediate shifter:</strong> If rot_imm = 0 the carry-out of the
+      shifter equals the incoming C flag (CPSR.C). If rot_imm ≠ 0, carry-out = bit 31
+      of the rotated value. Affects S=1 results for logical ops (AND, EOR, ORR, BIC, MOV, MVN, TST, TEQ).
+    </div>
+
+  </div>
+</div>
+
+<!-- ── PSEUDO-CODE ── -->
+<div class="sec-title" style="margin-bottom:10px">Decode &amp; Execute Pseudocode</div>
+<div class="pseudo">
+<span class="cm">// ─── Decode Operand2 ──────────────────────────────────────────────────</span>
+<span class="kw">function</span> <span class="fn">DecodeOperand2</span>(<span class="vr">I</span>, <span class="vr">op2</span>[11:0], <span class="vr">C_in</span>) → (<span class="vr">value</span>, <span class="vr">C_out</span>):
+  <span class="kw">if</span> <span class="vr">I</span> == <span class="nm">1</span>:                               <span class="cm">// immediate</span>
+    <span class="vr">rot</span>   = <span class="vr">op2</span>[11:8] * <span class="nm">2</span>
+    <span class="vr">imm8</span>  = <span class="vr">op2</span>[7:0]
+    <span class="vr">value</span> = <span class="fn">ROR32</span>(<span class="vr">imm8</span>, <span class="vr">rot</span>)
+    <span class="vr">C_out</span> = (<span class="vr">rot</span> == <span class="nm">0</span>) ? <span class="vr">C_in</span> : <span class="vr">value</span>[31]
+    <span class="kw">return</span> (<span class="vr">value</span>, <span class="vr">C_out</span>)
+  <span class="kw">else</span>:                                       <span class="cm">// register operand</span>
+    <span class="vr">Rm</span>    = <span class="fn">Reg</span>(<span class="vr">op2</span>[3:0])
+    <span class="vr">stype</span> = <span class="vr">op2</span>[6:5]
+    <span class="kw">if</span> <span class="vr">op2</span>[4] == <span class="nm">0</span>:                         <span class="cm">// shift by immediate</span>
+      <span class="vr">imm5</span> = <span class="vr">op2</span>[11:7]
+      <span class="kw">return</span> <span class="fn">ShiftImm</span>(<span class="vr">stype</span>, <span class="vr">Rm</span>, <span class="vr">imm5</span>, <span class="vr">C_in</span>)
+    <span class="kw">else</span>:                                    <span class="cm">// shift by register (op2[7] must be 0)</span>
+      <span class="vr">amount</span> = <span class="fn">Reg</span>(<span class="vr">op2</span>[11:8])[7:0]          <span class="cm">// only low byte used</span>
+      <span class="kw">return</span> <span class="fn">ShiftReg</span>(<span class="vr">stype</span>, <span class="vr">Rm</span>, <span class="vr">amount</span>, <span class="vr">C_in</span>)
+
+<span class="cm">// ─── Shift by immediate ────────────────────────────────────────────────</span>
+<span class="kw">function</span> <span class="fn">ShiftImm</span>(<span class="vr">stype</span>, <span class="vr">val</span>, <span class="vr">imm5</span>, <span class="vr">C_in</span>):
+  <span class="kw">switch</span> <span class="vr">stype</span>:
+    <span class="nm">00</span>: <span class="cm">// LSL</span>
+      <span class="kw">if</span> <span class="vr">imm5</span>==<span class="nm">0</span>: <span class="kw">return</span> (<span class="vr">val</span>, <span class="vr">C_in</span>)          <span class="cm">// no shift</span>
+      <span class="kw">return</span> (<span class="vr">val</span> &lt;&lt; <span class="vr">imm5</span>, <span class="vr">val</span>[32-<span class="vr">imm5</span>])
+    <span class="nm">01</span>: <span class="cm">// LSR  (imm5=0 means #32)</span>
+      <span class="vr">n</span> = (<span class="vr">imm5</span>==<span class="nm">0</span>) ? <span class="nm">32</span> : <span class="vr">imm5</span>
+      <span class="kw">return</span> (<span class="vr">val</span> &gt;&gt;u <span class="vr">n</span>, <span class="vr">val</span>[<span class="vr">n</span>-1])
+    <span class="nm">10</span>: <span class="cm">// ASR  (imm5=0 means #32)</span>
+      <span class="vr">n</span> = (<span class="vr">imm5</span>==<span class="nm">0</span>) ? <span class="nm">32</span> : <span class="vr">imm5</span>
+      <span class="kw">return</span> (<span class="vr">val</span> &gt;&gt;s <span class="vr">n</span>, <span class="vr">val</span>[<span class="vr">n</span>-1])
+    <span class="nm">11</span>: <span class="cm">// ROR  (imm5=0 → RRX)</span>
+      <span class="kw">if</span> <span class="vr">imm5</span>==<span class="nm">0</span>: <span class="kw">return</span> ({<span class="vr">C_in</span>, <span class="vr">val</span>[31:1]}, <span class="vr">val</span>[0])   <span class="cm">// RRX</span>
+      <span class="kw">return</span> (<span class="fn">ROR32</span>(<span class="vr">val</span>, <span class="vr">imm5</span>), <span class="vr">val</span>[<span class="vr">imm5</span>-1])
+
+<span class="cm">// ─── Shift by register ─────────────────────────────────────────────────</span>
+<span class="kw">function</span> <span class="fn">ShiftReg</span>(<span class="vr">stype</span>, <span class="vr">val</span>, <span class="vr">amount</span>, <span class="vr">C_in</span>):  <span class="cm">// amount = Rs[7:0]</span>
+  <span class="kw">if</span> <span class="vr">amount</span> == <span class="nm">0</span>: <span class="kw">return</span> (<span class="vr">val</span>, <span class="vr">C_in</span>)            <span class="cm">// no shift, C unchanged</span>
+  <span class="kw">switch</span> <span class="vr">stype</span>:
+    <span class="nm">00</span>: <span class="kw">return</span> (<span class="vr">amount</span>&gt;=<span class="nm">32</span>) ? (<span class="nm">0</span>,<span class="nm">0</span>) : (<span class="vr">val</span>&lt;&lt;<span class="vr">amount</span>, <span class="vr">val</span>[32-<span class="vr">amount</span>])
+    <span class="nm">01</span>: <span class="kw">return</span> (<span class="vr">amount</span>&gt;=<span class="nm">32</span>) ? (<span class="nm">0</span>,<span class="nm">0</span>) : (<span class="vr">val</span>&gt;&gt;u<span class="vr">amount</span>, <span class="vr">val</span>[<span class="vr">amount</span>-1])
+    <span class="nm">10</span>: <span class="kw">return</span> (<span class="vr">amount</span>&gt;=<span class="nm">32</span>) ? (<span class="fn">sign</span>(<span class="vr">val</span>),<span class="vr">val</span>[31]) : (<span class="vr">val</span>&gt;&gt;s<span class="vr">amount</span>, <span class="vr">val</span>[<span class="vr">amount</span>-1])
+    <span class="nm">11</span>: <span class="vr">n</span>=<span class="vr">amount</span>&amp;<span class="nm">0x1F</span>; <span class="kw">return</span> (<span class="vr">n</span>==<span class="nm">0</span>) ? (<span class="vr">val</span>,<span class="vr">val</span>[31]) : (<span class="fn">ROR32</span>(<span class="vr">val</span>,<span class="vr">n</span>), <span class="vr">val</span>[<span class="vr">n</span>-1])
+
+<span class="cm">// ─── Execute Data Processing instruction ───────────────────────────────</span>
+<span class="kw">function</span> <span class="fn">ExecuteDP</span>(<span class="vr">cond</span>, <span class="vr">opcode</span>, <span class="vr">S</span>, <span class="vr">Rn</span>, <span class="vr">Rd</span>, <span class="vr">I</span>, <span class="vr">op2</span>):
+  <span class="kw">if not</span> <span class="fn">ConditionPassed</span>(<span class="vr">cond</span>): <span class="kw">return</span>         <span class="cm">// instruction skipped</span>
+  (<span class="vr">Op2</span>, <span class="vr">C_shift</span>) = <span class="fn">DecodeOperand2</span>(<span class="vr">I</span>, <span class="vr">op2</span>, CPSR.C)
+  <span class="vr">Rn_val</span> = <span class="fn">Reg</span>(<span class="vr">Rn</span>)                             <span class="cm">// R15 reads as PC+8</span>
+  (<span class="vr">result</span>, <span class="vr">carry</span>, <span class="vr">overflow</span>) = <span class="fn">ALU</span>(<span class="vr">opcode</span>, <span class="vr">Rn_val</span>, <span class="vr">Op2</span>, CPSR.C)
+
+  <span class="kw">if</span> <span class="vr">opcode</span> <span class="kw">not in</span> {TST, TEQ, CMP, CMN}:       <span class="cm">// write-back result</span>
+    <span class="kw">if</span> <span class="vr">Rd</span> == <span class="nm">15</span>:
+      <span class="kw">if</span> <span class="vr">S</span>==<span class="nm">1</span>: CPSR = SPSR                      <span class="cm">// exception return</span>
+      PC = <span class="vr">result</span>
+    <span class="kw">else</span>: <span class="fn">Reg</span>(<span class="vr">Rd</span>) = <span class="vr">result</span>
+
+  <span class="kw">if</span> <span class="vr">S</span>==<span class="nm">1</span> <span class="kw">and</span> <span class="vr">Rd</span> != <span class="nm">15</span>:                        <span class="cm">// update flags</span>
+    CPSR.N = <span class="vr">result</span>[31]
+    CPSR.Z = (<span class="vr">result</span> == <span class="nm">0</span>)
+    CPSR.C = <span class="fn">isLogical</span>(<span class="vr">opcode</span>) ? <span class="vr">C_shift</span> : <span class="vr">carry</span>
+    CPSR.V = <span class="fn">isLogical</span>(<span class="vr">opcode</span>) ? CPSR.V : <span class="vr">overflow</span>
+    <span class="cm">// isLogical = {AND, EOR, ORR, BIC, MOV, MVN, TST, TEQ}</span>
+</div>
+
+<!-- ── ENCODING EXAMPLES ── -->
+<div class="example-section">
+  <div class="example-title">▶ Encoding Examples — compiler verification reference</div>
+  <div class="examples-grid">
+
+    <div class="ex-card">
+      <div class="ex-asm">ADD R3, R1, R2</div>
+      <div class="ex-bits">
+        <span style="color:#8fa8ff">1110</span>
+        <span style="color:#aa88ff">00</span>
+        <span style="color:#ccaa00">0</span>
+        <span style="color:#50c878">0100</span>
+        <span style="color:#80d080">0</span>
+        <span style="color:#80b0d0">0001</span>
+        <span style="color:#80c0c0">0011</span>
+        <span style="color:#e08080">000000000010</span>
+      </div>
+      <div class="ex-hex">0xE0813002</div>
+      <div class="ex-desc">Cond=AL, I=0, Op=ADD(0100), S=0, Rn=R1, Rd=R3, Rm=R2, shift=LSL#0 (no shift)</div>
+    </div>
+
+    <div class="ex-card">
+      <div class="ex-asm">ADDS R0, R0, #1</div>
+      <div class="ex-bits">
+        <span style="color:#8fa8ff">1110</span>
+        <span style="color:#aa88ff">00</span>
+        <span style="color:#ccaa00">1</span>
+        <span style="color:#50c878">0100</span>
+        <span style="color:#80d080">1</span>
+        <span style="color:#80b0d0">0000</span>
+        <span style="color:#80c0c0">0000</span>
+        <span style="color:#e08080">000000000001</span>
+      </div>
+      <div class="ex-hex">0xE2900001</div>
+      <div class="ex-desc">Cond=AL, I=1, Op=ADD, S=1, Rn=R0, Rd=R0, rot_imm=0, imm8=1 → #1</div>
+    </div>
+
+    <div class="ex-card">
+      <div class="ex-asm">MOVEQ R5, #0xFF000000</div>
+      <div class="ex-bits">
+        <span style="color:#8fa8ff">0000</span>
+        <span style="color:#aa88ff">00</span>
+        <span style="color:#ccaa00">1</span>
+        <span style="color:#50c878">1101</span>
+        <span style="color:#80d080">0</span>
+        <span style="color:#80b0d0">0000</span>
+        <span style="color:#80c0c0">0101</span>
+        <span style="color:#e08080">000011111111</span>
+      </div>
+      <div class="ex-hex">0x03A050FF</div>
+      <div class="ex-desc">Cond=EQ, MOV, I=1, Rn=0, Rd=R5, rot_imm=0100(4)→rotation=8, imm8=0xFF → ROR(0xFF,8)=0xFF000000</div>
+    </div>
+
+    <div class="ex-card">
+      <div class="ex-asm">CMP R2, R3, LSL R4</div>
+      <div class="ex-bits">
+        <span style="color:#8fa8ff">1110</span>
+        <span style="color:#aa88ff">00</span>
+        <span style="color:#ccaa00">0</span>
+        <span style="color:#50c878">1010</span>
+        <span style="color:#80d080">1</span>
+        <span style="color:#80b0d0">0010</span>
+        <span style="color:#80c0c0">0000</span>
+        <span style="color:#e08080">0100 0 00 1 0011</span>
+      </div>
+      <div class="ex-hex">0xE1520413</div>
+      <div class="ex-desc">Cond=AL, CMP (S=1 forced), Rn=R2, Rd=0000, Rs=R4, shift_type=LSL(00), bit[4]=1, Rm=R3</div>
+    </div>
+
+    <div class="ex-card">
+      <div class="ex-asm">MOV R0, R1, RRX</div>
+      <div class="ex-bits">
+        <span style="color:#8fa8ff">1110</span>
+        <span style="color:#aa88ff">00</span>
+        <span style="color:#ccaa00">0</span>
+        <span style="color:#50c878">1101</span>
+        <span style="color:#80d080">0</span>
+        <span style="color:#80b0d0">0000</span>
+        <span style="color:#80c0c0">0000</span>
+        <span style="color:#e08080">00000 11 0 0001</span>
+      </div>
+      <div class="ex-hex">0xE1A00061</div>
+      <div class="ex-desc">MOV, I=0, Rn=0000, Rd=R0, imm5=00000, shift_type=ROR(11), bit[4]=0, Rm=R1 → imm5=0 ⟹ RRX</div>
+    </div>
+
+    <div class="ex-card">
+      <div class="ex-asm">ANDNES R1, R2, R3, ASR #16</div>
+      <div class="ex-bits">
+        <span style="color:#8fa8ff">0001</span>
+        <span style="color:#aa88ff">00</span>
+        <span style="color:#ccaa00">0</span>
+        <span style="color:#50c878">0000</span>
+        <span style="color:#80d080">1</span>
+        <span style="color:#80b0d0">0010</span>
+        <span style="color:#80c0c0">0001</span>
+        <span style="color:#e08080">10000 10 0 0011</span>
+      </div>
+      <div class="ex-hex">0x01121843</div>
+      <div class="ex-desc">Cond=NE, AND, S=1, Rn=R2, Rd=R1, imm5=10000(16), shift_type=ASR(10), bit[4]=0, Rm=R3</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── COMPILER RULES ── -->
+<div class="card-full" style="margin-bottom:28px">
+  <div class="card-header" style="background:rgba(91,138,245,.2); padding:12px 16px;">
+    <span style="color:#8fa8ff">▪</span> Critical Compiler / Assembler Rules
+  </div>
+  <div class="card-body" style="padding:14px 16px;">
+    <table>
+      <tr><th>#</th><th>Rule</th><th>Details</th></tr>
+      <tr>
+        <td class="code">1</td>
+        <td class="op">Immediate encoding</td>
+        <td>Before emitting an immediate, verify: ∃ rot ∈ {0..15} such that ROR(val, rot×2) ≤ 255.
+            If no match → error or split into two instructions (e.g. MOV + ORR, or MOVW/MOVT on ARMv6T2+).</td>
+      </tr>
+      <tr>
+        <td class="code">2</td>
+        <td class="op">Test-ops S-bit</td>
+        <td>TST / TEQ / CMP / CMN: S is implicitly 1 — always set in the encoding regardless of the assembly syntax.
+            Rd field [15:12] must be 0b0000.</td>
+      </tr>
+      <tr>
+        <td class="code">3</td>
+        <td class="op">MOV / MVN Rn field</td>
+        <td>Rn [19:16] must be 0b0000. Hardware ignores it, but a non-zero value produces a non-canonical
+            encoding that may confuse disassemblers.</td>
+      </tr>
+      <tr>
+        <td class="code">4</td>
+        <td class="op">RRX encoding</td>
+        <td>RRX is encoded as ROR with imm5=0: shift_type=0b11, imm5=0b00000, I=0, bit[4]=0.
+            There is no shift-by-register form of RRX.</td>
+      </tr>
+      <tr>
+        <td class="code">5</td>
+        <td class="op">LSR / ASR #32</td>
+        <td>A shift of 32 is encoded with imm5=0: LSR#32 → stype=01, imm5=00000;
+            ASR#32 → stype=10, imm5=00000. The value 32 does not fit in 5 bits.</td>
+      </tr>
+      <tr>
+        <td class="code">6</td>
+        <td class="op">Shift-by-register constraints</td>
+        <td>Rm ≠ R15, Rs ≠ R15, Rd ≠ R15, Rn ≠ R15. Bit[7] must be 0 (otherwise decoded as Multiply).
+            Only Rs[7:0] contributes to the shift amount.</td>
+      </tr>
+      <tr>
+        <td class="code">7</td>
+        <td class="op">PC as operand</td>
+        <td>Reading Rn=R15: value = instruction_address + 8.
+            Writing Rd=R15: acts as a branch (BX-like). With S=1 and Rd=R15: CPSR ← SPSR (exception return).</td>
+      </tr>
+      <tr>
+        <td class="code">8</td>
+        <td class="op">Cond = 1111 (NV)</td>
+        <td>ARMv4: NV treated as NOP. ARMv5+: enters the unconditional instruction space (PLD, BLX(1), etc.).
+            Do not use 0b1111 for ordinary conditional instructions.</td>
+      </tr>
+      <tr>
+        <td class="code">9</td>
+        <td class="op">Instruction class disambiguation</td>
+        <td>Bits [27:26]=0b00 select Data Processing. Within that space, if [25]=0 and [7:4]=0b1001
+            the encoding is Multiply / Swap, not DP. If [25]=0 and [7:4] ∈ {0b1011, 0b11x1} it is
+            Extra Load/Store. Decoders must check these patterns before falling through to DP.</td>
+      </tr>
+      <tr>
+        <td class="code">10</td>
+        <td class="op">C-flag for logical ops (S=1)</td>
+        <td>For AND, EOR, ORR, BIC, MOV, MVN, TST, TEQ with S=1: CPSR.C = C_shift (carry-out of the
+            barrel shifter). CPSR.V is left unchanged. Arithmetic ops (ADD, SUB, etc.) use the ALU carry/overflow instead.</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- ── DECODE TREE ── -->
+<div class="card-full" style="margin-bottom:28px">
+  <div class="card-header" style="background:rgba(181,123,238,.2); padding:12px 16px;">
+    <span style="color:#c090f0">▪</span> Decode Priority Tree — ARMv7-A/R conditional instruction space
+  </div>
+  <div class="card-body" style="padding:14px 16px;">
+    <div class="pseudo" style="margin-bottom:0">
+[31:28] ≠ 1111  →  conditional instruction (evaluate Cond, skip if false)
+[31:28] == 1111  →  unconditional space (ARMv5+: Hints, PLD, BLX(1), SETEND, etc.)
+
+Conditional path — bits [27:26]:
+  00  →  Data Processing / Miscellaneous
+  01  →  Load / Store (word, byte)
+  10  →  Branch (B, BL) / Block transfer (LDM, STM)
+  11  →  Coprocessor / SVC
+
+Data Processing / Miscellaneous — bit [25]:
+  1   →  DP Immediate  (I=1)
+
+  0   →  Register form — check [7:4] first:
+    [7:4] == 1001                       →  Multiply / Swap
+    [7:4] == 1011  or  11x1            →  Extra Load/Store (halfword, signed byte)
+    [24:23]==10 and [20]==0 and [7]==0  →  Miscellaneous (MRS, MSR, BX, CLZ, …)
+    otherwise                           →  DP Register
+      [4] == 0  →  shift-by-immediate
+      [4] == 1, [7] == 0  →  shift-by-register
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center; color:var(--muted); font-family:var(--mono); font-size:11px; margin-top:24px; line-height:2">
+  Independent reference diagram for ARMv7-A/R A32 ISA · Data Processing instructions<br>
+  Original work · <strong style="color:var(--accent3)">CC0 1.0 Universal — No Rights Reserved</strong><br>
+  Freely copy, modify, redistribute, use commercially — no attribution required
+</div>
+
+</body>
+</html>

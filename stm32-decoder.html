@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STM32 Part Number Decoder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14161a;
+    --panel:#1b1e24;
+    --panel2:#20242b;
+    --border:#2a2e36;
+    --text:#ece9e2;
+    --muted:#8b909b;
+    --c-family:#5b8def;
+    --c-line:#b98ce0;
+    --c-pin:#e8a33d;
+    --c-flash:#4fb8a0;
+    --c-package:#e36ba0;
+    --c-temp:#57c7e3;
+    --warn:#e0623d;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;}
+  body{padding:40px 20px 80px;}
+  .wrap{max-width:840px;margin:0 auto;}
+
+  header{margin-bottom:28px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+  h1{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;margin:0 0 8px;letter-spacing:-0.01em;}
+  .sub{color:var(--muted);font-size:14.5px;line-height:1.55;max-width:60ch;}
+
+  .tabs{display:flex;gap:2px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:3px;width:fit-content;margin:26px 0 22px;}
+  .tab{font-family:'JetBrains Mono',monospace;font-size:13px;padding:9px 18px;border-radius:6px;cursor:pointer;color:var(--muted);user-select:none;transition:all .15s ease;}
+  .tab.active{background:var(--panel);color:var(--text);box-shadow:0 0 0 1px var(--border);}
+  .tab:hover:not(.active){color:var(--text);}
+
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:26px;}
+
+  /* --- assembled part number display --- */
+  .pn-strip{font-family:'JetBrains Mono',monospace;font-size:clamp(20px,5vw,34px);font-weight:600;letter-spacing:.02em;display:flex;flex-wrap:wrap;gap:2px;margin-bottom:6px;line-height:1.3;}
+  .seg{padding:2px 3px;border-radius:4px;cursor:default;transition:background .12s ease;position:relative;}
+  .seg[data-k]:hover{background:rgba(255,255,255,.08);}
+  .seg.family{color:var(--c-family);}
+  .seg.line{color:var(--c-line);}
+  .seg.pin{color:var(--c-pin);}
+  .seg.flash{color:var(--c-flash);}
+  .seg.package{color:var(--c-package);}
+  .seg.temp{color:var(--c-temp);}
+  .seg.tr{color:var(--muted);}
+  .seg.static{color:var(--text);}
+  .seg.ghost{color:#3a3e46;}
+
+  .pn-caption{font-size:12.5px;color:var(--muted);min-height:18px;margin-bottom:22px;font-family:'JetBrains Mono',monospace;}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-bottom:24px;font-size:12px;color:var(--muted);}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .dot{width:8px;height:8px;border-radius:2px;display:inline-block;}
+
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:560px){.field-grid{grid-template-columns:1fr;}}
+
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-family:'JetBrains Mono',monospace;}
+  select, input[type=text]{
+    width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    padding:10px 12px;border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:14px;
+    outline:none;appearance:none;
+  }
+  select:focus, input[type=text]:focus{border-color:var(--c-pin);}
+  .field select option{background:var(--panel2);}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:5px;}
+
+  #decodeInput{font-size:18px;padding:14px 14px;letter-spacing:.03em;}
+
+  .breakdown{margin-top:22px;display:flex;flex-direction:column;gap:10px;}
+  .chip-row{display:flex;align-items:baseline;gap:12px;padding:10px 12px;background:var(--panel2);border-radius:8px;border-left:3px solid transparent;}
+  .chip-row .tok{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;min-width:34px;}
+  .chip-row .desc{font-size:13.5px;color:var(--text);}
+  .chip-row .desc b{color:var(--text);}
+  .chip-row .desc small{color:var(--muted);display:block;margin-top:1px;}
+
+  .error{color:var(--warn);font-size:13.5px;font-family:'JetBrains Mono',monospace;margin-top:16px;line-height:1.6;}
+
+  .actions{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap;}
+  .btn{font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:600;padding:12px 18px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--text);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:border-color .15s;}
+  .btn.primary{background:var(--c-pin);color:#1a1305;border-color:var(--c-pin);}
+  .btn.primary:hover{filter:brightness(1.08);}
+  .btn:not(.primary):hover{border-color:var(--muted);}
+  .btn svg{width:14px;height:14px;}
+
+  footer{margin-top:30px;font-size:12px;color:var(--muted);line-height:1.6;font-family:'JetBrains Mono',monospace;}
+  footer a{color:var(--c-temp);}
+  hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">all STM32 families &middot; suffix reference</div>
+    <h1>STM32 part number decoder</h1>
+    <div class="sub">Build a part number from the specs you need, or paste one in and see what each letter means. Build mode covers the classic F0/F1/F2/F3/F4/F7/G0/G4/L0/L1/L4/L5 suffix scheme. Decode mode also recognizes newer series (H5/H7/U5/WB/WL/C0/N6) and tells you why they don't fit the classic pattern.</div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="build">build</div>
+    <div class="tab" data-tab="decode">decode</div>
+  </div>
+
+  <!-- BUILD PANEL -->
+  <div class="panel" id="buildPanel">
+
+    <div class="pn-strip" id="buildStrip"></div>
+    <div class="pn-caption" id="buildCaption">Hover a segment to see which field it comes from.</div>
+
+    <div class="legend">
+      <span><i class="dot" style="background:var(--c-family)"></i>family</span>
+      <span><i class="dot" style="background:var(--c-line)"></i>line</span>
+      <span><i class="dot" style="background:var(--c-pin)"></i>pin count</span>
+      <span><i class="dot" style="background:var(--c-flash)"></i>flash size</span>
+      <span><i class="dot" style="background:var(--c-package)"></i>package</span>
+      <span><i class="dot" style="background:var(--c-temp)"></i>temp grade</span>
+    </div>
+
+    <div class="field-grid">
+      <div class="field">
+        <label>family</label>
+        <select id="selFamily"></select>
+        <div class="hint" id="familyHint"></div>
+      </div>
+      <div class="field">
+        <label>line</label>
+        <select id="selLine"></select>
+        <div class="hint" id="lineHint"></div>
+      </div>
+      <div class="field">
+        <label>pin count</label>
+        <select id="selPin"></select>
+        <div class="hint" id="pinHint"></div>
+      </div>
+      <div class="field">
+        <label>flash size</label>
+        <select id="selFlash"></select>
+        <div class="hint" id="flashHint"></div>
+      </div>
+      <div class="field">
+        <label>package</label>
+        <select id="selPackage"></select>
+        <div class="hint" id="packageHint"></div>
+      </div>
+      <div class="field">
+        <label>temperature grade</label>
+        <select id="selTemp"></select>
+        <div class="hint" id="tempHint"></div>
+      </div>
+      <div class="field">
+        <label>tape &amp; reel</label>
+        <select id="selTR">
+          <option value="">none (tray)</option>
+          <option value="TR">TR — tape &amp; reel</option>
+        </select>
+        <div class="hint">Reel packaging, no electrical difference.</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a class="btn primary" id="buildMouser" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        Search this part on Mouser
+      </a>
+    </div>
+
+    <div class="error" id="buildWarn"></div>
+  </div>
+
+  <!-- DECODE PANEL -->
+  <div class="panel" id="decodePanel" style="display:none;">
+    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:8px;font-family:'JetBrains Mono',monospace;">paste a part number</label>
+    <input type="text" id="decodeInput" placeholder="STM32F405RGT6" autocomplete="off" spellcheck="false">
+
+    <div class="pn-strip" id="decodeStrip" style="margin-top:22px;"></div>
+
+    <div class="breakdown" id="decodeBreakdown"></div>
+    <div class="error" id="decodeError"></div>
+
+    <div class="actions">
+      <a class="btn primary" id="decodeMouser" href="#" target="_blank" rel="noopener" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        Search this part on Mouser
+      </a>
+    </div>
+  </div>
+
+  <footer>
+    Build mode covers common lines across F0/F1/F2/F3/F4/F7/G0/G4/L0/L1/L4/L5 — the classic suffix scheme, but the line list per family is representative, not exhaustive. Decode mode recognizes newer series (H5, H7, U5, WB, WBA, WL, C0, N6, U0, U3, MP1/MP2) and explains why their suffixes differ, instead of guessing. Always cross-check the "ordering information" table in the specific datasheet at <a href="https://www.st.com" target="_blank" rel="noopener">st.com</a> before placing an order.
+  </footer>
+
+</div>
+
+<script>
+// ---------- data ----------
+// pin/flash/package/temp letter meanings are shared across every "classic scheme" family
+const PIN = {
+  F:{n:'20 pins'}, G:{n:'28 pins'}, K:{n:'32 pins'}, T:{n:'36 pins'}, C:{n:'48 pins'},
+  R:{n:'64 pins'}, V:{n:'100 pins'}, Z:{n:'144 pins'}, I:{n:'176 pins'}, N:{n:'216 pins'}
+};
+const FLASH = {
+  '4':{kb:16}, '6':{kb:32}, '8':{kb:64}, B:{kb:128}, C:{kb:256}, D:{kb:384},
+  E:{kb:512}, F:{kb:768}, G:{kb:1024}, H:{kb:1536}, I:{kb:2048}
+};
+const PACKAGE = {
+  T:{n:'LQFP'}, H:{n:'BGA / UFBGA'}, U:{n:'VFQFPN / UFQFPN'}, Y:{n:'WLCSP (die-scale)'},
+  P:{n:'TSSOP'}, Q:{n:'UFBGA (fine pitch)'}, M:{n:'UFQFPN (small)'}
+};
+const TEMP = {
+  '6':{n:'-40°C to 85°C (industrial)'}, '7':{n:'-40°C to 105°C (extended)'}
+};
+
+// curated common lines per family — NOT exhaustive, just the well-known/documented ones.
+// pin/flash/package combos shown are indicative of what ST typically offers for that line;
+// always confirm exact availability on st.com before ordering.
+const FAMILIES = {
+  F0:{ name:'Entry-level', core:'Cortex-M0', lines:{
+    '30':{desc:'Value line, 48MHz, basic peripherals', pins:['F','K','C','R'], flash:['4','6','8','B'], pkg:['P','T','U','Y']},
+    '51':{desc:'48MHz, USB device, touch sensing', pins:['K','C','R'], flash:['4','6','8'], pkg:['P','T','U','Y']},
+    '70':{desc:'48MHz, crystal-less USB, CAN', pins:['F','C','R'], flash:['6','8','B'], pkg:['P','T','U']},
+    '72':{desc:'48MHz, USB + CAN + more RAM', pins:['C','R','V'], flash:['B','C'], pkg:['T','U','Y']},
+  }},
+  F1:{ name:'Mainstream', core:'Cortex-M3', lines:{
+    '00':{desc:'Value line, 24MHz', pins:['C','R','V','Z'], flash:['4','6','8','B','C','D','E'], pkg:['T','H','U']},
+    '01':{desc:'Access line, 36MHz', pins:['C','R','V','Z'], flash:['4','6','8','B','C','D','E','F','G'], pkg:['T','H','U']},
+    '03':{desc:'Performance line, 72MHz — the classic "Blue Pill" chip', pins:['C','R','V','Z'], flash:['4','6','8','B','C','D','E','F','G'], pkg:['T','H','U']},
+    '05':{desc:'Connectivity line, USB OTG + Ethernet', pins:['R','V'], flash:['8','B','C'], pkg:['T']},
+    '07':{desc:'Connectivity line, USB OTG HS + Ethernet', pins:['R','V'], flash:['B','C'], pkg:['T','H']},
+  }},
+  F2:{ name:'Performance', core:'Cortex-M3', lines:{
+    '05':{desc:'120MHz, no camera/LCD', pins:['R','V','Z'], flash:['B','C','E','F','G'], pkg:['T','H']},
+    '07':{desc:'120MHz + Ethernet + camera DCMI', pins:['R','V','Z'], flash:['C','E','F','G'], pkg:['T','H']},
+  }},
+  F3:{ name:'Mixed-signal', core:'Cortex-M4F', lines:{
+    '31':{desc:'72MHz, entry mixed-signal', pins:['K','C','R'], flash:['6','8','B'], pkg:['T','U','Y']},
+    '03':{desc:'72MHz, op-amps + comparators, motor control', pins:['C','K','R','V','Z'], flash:['6','8','B','C','D','E'], pkg:['T','U','Y']},
+    '34':{desc:'72MHz, digital power conversion', pins:['K','C','R'], flash:['6','8'], pkg:['T','U','Y']},
+    '73':{desc:'72MHz, LCD driver + USB', pins:['C','R','V'], flash:['8','B','C'], pkg:['T','U','Y']},
+  }},
+  F4:{ name:'Performance', core:'Cortex-M4F', lines:{
+    '01':{desc:'Entry M4F, 84MHz, no CAN/DAC', pins:['C','R','V'], flash:['B','C'], pkg:['T','U','Y']},
+    '05':{desc:'168MHz, the classic Betaflight-era FC chip', pins:['R','V','Z'], flash:['E','G'], pkg:['T','H']},
+    '07':{desc:'Like 405 + Ethernet MAC, camera DCMI', pins:['R','V','Z'], flash:['E','G'], pkg:['T','H']},
+    '10':{desc:'Low-power variant of 401', pins:['C','R','T'], flash:['8','B'], pkg:['T','U','Y']},
+    '11':{desc:'100MHz, cheap, Blackpill-class boards', pins:['C','R','T','V'], flash:['C','E'], pkg:['T','U','Y']},
+    '12':{desc:'100MHz, more peripherals than 411', pins:['C','R','V'], flash:['C','E','G'], pkg:['T','U','Y']},
+    '13':{desc:'100MHz, CAN + AES crypto', pins:['C','R','V'], flash:['E','G','H'], pkg:['T','H','U']},
+    '23':{desc:'413 + extra crypto features', pins:['C','R','V'], flash:['E','G','H'], pkg:['T','H','U']},
+    '27':{desc:'180MHz, adds LCD-TFT, camera', pins:['I','V','Z'], flash:['E','G'], pkg:['T','H']},
+    '29':{desc:'180MHz, LCD-TFT + more SRAM', pins:['I','V','Z'], flash:['E','G','I'], pkg:['T','H']},
+    '37':{desc:'427 + crypto/hash accelerator', pins:['I','V','Z'], flash:['G'], pkg:['T','H']},
+    '39':{desc:'429 + crypto/hash accelerator', pins:['I','V','Z'], flash:['G','I'], pkg:['T','H']},
+    '46':{desc:'180MHz, SPDIF, dual-bank flash', pins:['C','R','V'], flash:['C','E'], pkg:['T','U','Y']},
+    '69':{desc:'180MHz, MIPI-DSI display out', pins:['I','V','Z','N'], flash:['G','I'], pkg:['T','H']},
+    '79':{desc:'469 + crypto/hash accelerator', pins:['I','V','Z','N'], flash:['G','I'], pkg:['T','H']},
+  }},
+  F7:{ name:'High-performance', core:'Cortex-M7', lines:{
+    '45':{desc:'216MHz Cortex-M7, no crypto', pins:['V','Z','I'], flash:['E','G'], pkg:['T','H']},
+    '46':{desc:'216MHz Cortex-M7, LCD-TFT + camera', pins:['V','Z','I'], flash:['E','G','I'], pkg:['T','H']},
+    '67':{desc:'216MHz + crypto/hash accelerator', pins:['V','Z','I'], flash:['G','I'], pkg:['T','H']},
+    '69':{desc:'767 + MIPI-DSI display out', pins:['V','Z','I','N'], flash:['G','I'], pkg:['T','H']},
+  }},
+  G0:{ name:'Mainstream', core:'Cortex-M0+', lines:{
+    '31':{desc:'64MHz entry, low pin count', pins:['F','K','C','R'], flash:['4','6','8'], pkg:['P','T','U','Y']},
+    '70':{desc:'64MHz, USB device', pins:['K','C','R'], flash:['6','8','B'], pkg:['T','U','Y']},
+    '71':{desc:'64MHz, USB + CAN FD', pins:['K','C','R'], flash:['8','B'], pkg:['T','U','Y']},
+  }},
+  G4:{ name:'Mixed-signal', core:'Cortex-M4F', lines:{
+    '31':{desc:'170MHz entry mixed-signal', pins:['K','C','R','V'], flash:['6','8','B'], pkg:['T','U','Y']},
+    '74':{desc:'170MHz, more analog + CORDIC/FMAC math accel', pins:['C','R','V'], flash:['B','C','E'], pkg:['T','U','Y','Q']},
+    '91':{desc:'170MHz, USB-C PD controller peripherals', pins:['C','R','V'], flash:['C','E'], pkg:['T','U','Y']},
+  }},
+  L0:{ name:'Ultra-low-power', core:'Cortex-M0+', lines:{
+    '53':{desc:'32MHz ultra-low-power, USB', pins:['F','K','C','R'], flash:['6','8'], pkg:['P','T','U','Y']},
+    '73':{desc:'32MHz ultra-low-power, USB + AES', pins:['K','C','R','V'], flash:['8','B'], pkg:['T','U','Y']},
+    '83':{desc:'32MHz, largest flash in L0', pins:['C','R','V'], flash:['C'], pkg:['T','U','Y']},
+  }},
+  L1:{ name:'Ultra-low-power', core:'Cortex-M3', lines:{
+    '52':{desc:'32MHz ultra-low-power, LCD driver', pins:['C','R','V','Z'], flash:['6','8','B','C','D','E'], pkg:['T','H','U','Y']},
+    '62':{desc:'32MHz, AES crypto', pins:['C','R','V','Z'], flash:['B','C','D','E'], pkg:['T','H','U']},
+  }},
+  L4:{ name:'Ultra-low-power', core:'Cortex-M4F', lines:{
+    '32':{desc:'80MHz ultra-low-power, small footprint', pins:['K','C','R'], flash:['6','8','B'], pkg:['T','U','Y']},
+    '76':{desc:'80MHz, full peripheral set, most popular L4 line', pins:['C','R','V','Z'], flash:['B','C','E','G'], pkg:['T','U','Y','Q']},
+    '96':{desc:'80MHz + CAN FD + extra SRAM', pins:['R','V','Z'], flash:['G'], pkg:['T','U','Y']},
+  }},
+  L5:{ name:'Ultra-low-power', core:'Cortex-M33', lines:{
+    '52':{desc:'110MHz, TrustZone security', pins:['C','R','V','Z'], flash:['E','G'], pkg:['T','U','Y']},
+    '62':{desc:'552 + extra crypto', pins:['R','V','Z'], flash:['E','G'], pkg:['T','H','U']},
+  }},
+};
+
+// series that exist but use extended/different suffix schemes — decode mode recognizes the
+// prefix and explains why, instead of pretending the classic pattern applies
+const NONCLASSIC_NOTES = {
+  H7:'H7 uses the classic letters but often adds extra characters for dual-core/cache config and revision — check the specific datasheet\'s ordering table.',
+  H5:'H5 (Cortex-M33) mostly follows the classic scheme but with its own line/pin conventions — verify against st.com.',
+  U5:'U5 (Cortex-M33, TrustZone) uses an extended scheme with additional security/config characters.',
+  WB:'WB (wireless, BLE/802.15.4) encodes radio stack/config info in the suffix, not just pin/flash/package.',
+  WBA:'WBA (Bluetooth LE) uses its own newer suffix scheme.',
+  WL:'WL (LoRa/sub-GHz) suffix encodes radio band/config, different from the classic scheme.',
+  C0:'C0 (low-cost Cortex-M0+) mostly follows the classic scheme but is very new — verify letter tables against st.com.',
+  N6:'N6 (Neural-ART/edge-AI) uses a different scheme entirely — package is BGA-only and the suffix encodes security/AI config, e.g. STM32N655A0H3Q.',
+  MP1:'MP1/MP2 are Cortex-A+M multi-core application processors with a substantially different part-numbering scheme.',
+  MP2:'MP1/MP2 are Cortex-A+M multi-core application processors with a substantially different part-numbering scheme.',
+  U0:'U0 is a newer ultra-low-power line — verify letter tables against st.com.',
+  U3:'U3 is a newer ultra-low-power line — verify letter tables against st.com.',
+};
+
+const MOUSER_BASE = 'https://eu.mouser.com/c/?q=';
+const mouserLink = pn => MOUSER_BASE + encodeURIComponent(pn);
+
+// ---------- tabs ----------
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const isBuild = t.dataset.tab === 'build';
+    document.getElementById('buildPanel').style.display = isBuild ? 'block':'none';
+    document.getElementById('decodePanel').style.display = isBuild ? 'none':'block';
+  });
+});
+
+// ---------- build mode ----------
+const selFamily = document.getElementById('selFamily');
+const selLine = document.getElementById('selLine');
+const selPin = document.getElementById('selPin');
+const selFlash = document.getElementById('selFlash');
+const selPackage = document.getElementById('selPackage');
+const selTemp = document.getElementById('selTemp');
+const selTR = document.getElementById('selTR');
+
+Object.keys(FAMILIES).forEach(f=>{
+  const o = document.createElement('option');
+  o.value = f; o.textContent = 'STM32'+f+' — '+FAMILIES[f].name+' ('+FAMILIES[f].core+')';
+  selFamily.appendChild(o);
+});
+selFamily.value = 'F4';
+
+function currentLine(){
+  return FAMILIES[selFamily.value].lines[selLine.value];
+}
+function fillLine(){
+  const fam = FAMILIES[selFamily.value];
+  selLine.innerHTML='';
+  Object.keys(fam.lines).forEach(l=>{
+    const o = document.createElement('option');
+    o.value = l; o.textContent = selFamily.value+l;
+    selLine.appendChild(o);
+  });
+}
+function fillPin(){
+  const line = currentLine();
+  selPin.innerHTML='';
+  line.pins.forEach(p=>{
+    const o=document.createElement('option'); o.value=p;
+    o.textContent = p+' — '+(PIN[p]?PIN[p].n:'?');
+    selPin.appendChild(o);
+  });
+}
+function fillFlash(){
+  const line = currentLine();
+  selFlash.innerHTML='';
+  line.flash.forEach(f=>{
+    const o=document.createElement('option'); o.value=f;
+    o.textContent = f+' — '+FLASH[f].kb+'KB';
+    selFlash.appendChild(o);
+  });
+}
+function fillPackage(){
+  const line = currentLine();
+  selPackage.innerHTML='';
+  line.pkg.forEach(p=>{
+    const o=document.createElement('option'); o.value=p;
+    o.textContent = p+' — '+PACKAGE[p].n;
+    selPackage.appendChild(o);
+  });
+}
+function fillTemp(){
+  selTemp.innerHTML='';
+  Object.keys(TEMP).forEach(t=>{
+    const o=document.createElement('option'); o.value=t;
+    o.textContent = t+' — '+TEMP[t].n;
+    selTemp.appendChild(o);
+  });
+}
+
+function renderBuild(){
+  const fam = selFamily.value, line = selLine.value, pin = selPin.value, flash = selFlash.value,
+        pkg = selPackage.value, temp = selTemp.value, tr = selTR.value;
+  const strip = document.getElementById('buildStrip');
+  strip.innerHTML =
+    `<span class="seg static">STM32</span>`+
+    `<span class="seg family" data-k="family">${fam}</span>`+
+    `<span class="seg line" data-k="line">${line}</span>`+
+    `<span class="seg pin" data-k="pin">${pin}</span>`+
+    `<span class="seg flash" data-k="flash">${flash}</span>`+
+    `<span class="seg package" data-k="package">${pkg}</span>`+
+    `<span class="seg temp" data-k="temp">${temp}</span>`+
+    (tr?`<span class="seg tr" data-k="tr">${tr}</span>`:'');
+
+  document.getElementById('familyHint').textContent = FAMILIES[fam].name+' — '+FAMILIES[fam].core;
+  document.getElementById('lineHint').textContent = currentLine().desc;
+  document.getElementById('pinHint').textContent = PIN[pin]?PIN[pin].n:'';
+  document.getElementById('flashHint').textContent = FLASH[flash].kb+'KB flash';
+  document.getElementById('packageHint').textContent = PACKAGE[pkg].n;
+  document.getElementById('tempHint').textContent = TEMP[temp].n;
+
+  const pn = `STM32${fam}${line}${pin}${flash}${pkg}${temp}${tr}`;
+  document.getElementById('buildMouser').href = mouserLink(pn);
+  document.getElementById('buildWarn').textContent =
+    'Combination assembled from ST\'s general suffix scheme — confirm this exact part exists (some pin/flash/package combos aren\'t produced for every line) before ordering.';
+
+  strip.querySelectorAll('.seg[data-k]').forEach(el=>{
+    el.addEventListener('mouseenter', ()=>{
+      const labels = {family:'family / performance line', line:'specific device within the line',
+        pin:'pin count', flash:'flash size', package:'package type', temp:'temperature grade', tr:'tape & reel packaging'};
+      document.getElementById('buildCaption').textContent = labels[el.dataset.k];
+    });
+    el.addEventListener('mouseleave', ()=>{
+      document.getElementById('buildCaption').textContent = 'Hover a segment to see which field it comes from.';
+    });
+  });
+}
+
+selFamily.addEventListener('change', ()=>{
+  fillLine(); fillPin(); fillFlash(); fillPackage(); fillTemp(); renderBuild();
+});
+selLine.addEventListener('change', ()=>{
+  fillPin(); fillFlash(); fillPackage(); fillTemp(); renderBuild();
+});
+[selPin, selFlash, selPackage, selTemp, selTR].forEach(el=>el.addEventListener('change', renderBuild));
+
+fillLine(); selLine.value = FAMILIES.F4.lines['405'] ? '405' : selLine.value;
+fillPin(); fillFlash(); fillPackage(); fillTemp(); renderBuild();
+
+// ---------- decode mode ----------
+const decodeInput = document.getElementById('decodeInput');
+
+function decode(raw){
+  const s = raw.trim().toUpperCase();
+  const m = s.match(/^STM32([A-Z]\d)(\d{2,3})([A-Z])([A-Z0-9])([A-Z])(\d)(TR)?$/);
+  return m ? {full:s, family:m[1], line:m[2], pin:m[3], flash:m[4], pkg:m[5], temp:m[6], tr:m[7]||''} : null;
+}
+
+function nonClassicMatch(s){
+  // catches families whose prefix doesn't fit the classic pattern, or does but means something else
+  const m = s.match(/^STM32([A-Z]{2,3}\d?)/);
+  if(!m) return null;
+  for(const key of Object.keys(NONCLASSIC_NOTES)){
+    if(m[1].startsWith(key)) return {key, note:NONCLASSIC_NOTES[key]};
+  }
+  return null;
+}
+
+function renderDecode(){
+  const raw = decodeInput.value;
+  const strip = document.getElementById('decodeStrip');
+  const breakdown = document.getElementById('decodeBreakdown');
+  const err = document.getElementById('decodeError');
+  const mouserBtn = document.getElementById('decodeMouser');
+
+  if(!raw.trim()){
+    strip.innerHTML=''; breakdown.innerHTML=''; err.textContent=''; mouserBtn.style.display='none';
+    return;
+  }
+
+  const d = decode(raw);
+  if(!d){
+    strip.innerHTML = `<span class="seg ghost">${raw.toUpperCase()}</span>`;
+    breakdown.innerHTML = '';
+    const nc = nonClassicMatch(raw.trim().toUpperCase());
+    err.textContent = nc
+      ? nc.note
+      : "Doesn't match the classic F0/F1/F2/F3/F4/F7/G0/G4/L0/L1/L4/L5 suffix pattern. Check the datasheet's ordering information table directly.";
+    mouserBtn.style.display = 'none';
+    return;
+  }
+  err.textContent = '';
+
+  strip.innerHTML =
+    `<span class="seg static">STM32</span>`+
+    `<span class="seg family" data-k="family">${d.family}</span>`+
+    `<span class="seg line" data-k="line">${d.line}</span>`+
+    `<span class="seg pin" data-k="pin">${d.pin}</span>`+
+    `<span class="seg flash" data-k="flash">${d.flash}</span>`+
+    `<span class="seg package" data-k="package">${d.pkg}</span>`+
+    `<span class="seg temp" data-k="temp">${d.temp}</span>`+
+    (d.tr?`<span class="seg tr" data-k="tr">${d.tr}</span>`:'');
+
+  const famData = FAMILIES[d.family];
+  const famName = famData ? `${famData.name} — ${famData.core}` : 'unrecognized family — check st.com';
+  const lineData = famData ? famData.lines[d.line] : null;
+  const pinName = PIN[d.pin] ? PIN[d.pin].n : 'not in reference table — check datasheet';
+  const flashInfo = FLASH[d.flash] ? FLASH[d.flash].kb+'KB' : 'not in reference table — check datasheet';
+  const pkgName = PACKAGE[d.pkg] ? PACKAGE[d.pkg].n : 'not in reference table — check datasheet';
+  const tempName = TEMP[d.temp] ? TEMP[d.temp].n : 'not in reference table — check datasheet';
+
+  const rows = [
+    {c:'family', tok:d.family, title:'Family / performance line', desc:famName},
+    {c:'line', tok:d.line, title:'Specific device', desc: lineData ? lineData.desc : 'Line-specific peripherals — see the datasheet feature table'},
+    {c:'pin', tok:d.pin, title:'Pin count', desc:pinName},
+    {c:'flash', tok:d.flash, title:'Flash size', desc:flashInfo},
+    {c:'package', tok:d.pkg, title:'Package', desc:pkgName},
+    {c:'temp', tok:d.temp, title:'Temperature grade', desc:tempName},
+  ];
+  if(d.tr) rows.push({c:'tr', tok:d.tr, title:'Packaging', desc:'Tape & reel — no electrical difference'});
+
+  breakdown.innerHTML = rows.map(r=>`
+    <div class="chip-row" style="border-left-color:var(--c-${r.c==='tr'?'temp':r.c})">
+      <span class="tok" style="color:var(--c-${r.c==='tr'?'temp':r.c})">${r.tok}</span>
+      <span class="desc"><b>${r.title}</b><small>${r.desc}</small></span>
+    </div>`).join('');
+
+  mouserBtn.style.display = 'inline-flex';
+  mouserBtn.href = mouserLink(d.full);
+}
+
+decodeInput.addEventListener('input', renderDecode);
+decodeInput.value = 'STM32F405RGT6';
+renderDecode();
+</script>
+</body>
+</html>
